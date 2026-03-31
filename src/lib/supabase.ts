@@ -1,0 +1,23 @@
+import { createServerClient, parseCookieHeader } from '@supabase/ssr'
+
+export const supabaseClient = (context: any) => {
+  return createServerClient(
+    import.meta.env.SUPABASE_URL,
+    import.meta.env.SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        get(name: string) {
+          const cookies = parseCookieHeader(context.request.headers.get('Cookie') ?? '');
+          const found = cookies.find((cookie: { name: string; value?: string }) => cookie.name === name);
+          return found && typeof found.value === 'string' ? found.value : undefined;
+        },
+        set(name: string, value: string, options?: any) {
+          context.cookies.set(name, value, options);
+        },
+        remove(name: string, options?: any) {
+          context.cookies.delete(name, options);
+        },
+      },
+    }
+  )
+}

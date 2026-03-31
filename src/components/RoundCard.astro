@@ -1,0 +1,21 @@
+---
+// src/components/RoundCard.astro
+const { round } = Astro.props;
+---
+<div class="flex items-center justify-between p-4 bg-white border-l-4 border-green-500 rounded-r-lg shadow-sm mb-3">
+  <div>
+    <h4 class="font-bold text-slate-800">{round.course_name}</h4>
+    <p class="text-xs text-slate-500 uppercase font-semibold">{new Date(round.date).toLocaleDateString()}</p>
+  </div>
+  
+  <div class="flex gap-8 text-center">
+    <div>
+      <p class="text-[10px] text-slate-400 uppercase">Score</p>
+      <p class="text-xl font-black text-slate-900">{round.gross_score}</p>
+    </div>
+    <div>
+      <p class="text-[10px] text-slate-400 uppercase">Diff</p>
+      <p class="text-xl font-bold text-green-600">{round.differential}</p>
+    </div>
+  </div>
+</div>

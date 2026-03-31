@@ -1,0 +1,64 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+  <section style="max-width:400px;margin:3rem auto;padding:2rem;border-radius:8px;box-shadow:0 2px 8px #0001;background:#fff;">
+    <h1 style="text-align:center;">Sign Up</h1>
+    <form id="signupForm" style="display:flex;flex-direction:column;gap:1rem;">
+      <label>
+        Email
+        <input type="email" name="email" required style="width:100%;padding:0.5rem;margin-top:0.25rem;" />
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" required minlength="6" style="width:100%;padding:0.5rem;margin-top:0.25rem;" />
+      </label>
+      <label>
+        Username
+        <input type="text" name="username" required style="width:100%;padding:0.5rem;margin-top:0.25rem;" />
+      </label>
+      <label>
+        Full Name
+        <input type="text" name="full_name" required style="width:100%;padding:0.5rem;margin-top:0.25rem;" />
+      </label>
+      <label>
+        Current Handicap Index
+        <input type="number" name="current_handicap_index" step="0.1" required style="width:100%;padding:0.5rem;margin-top:0.25rem;" />
+      </label>
+      <button type="submit" style="padding:0.75rem;background:#1a7f37;color:#fff;border:none;border-radius:4px;font-size:1rem;">Create Account</button>
+      <div id="signupError" style="color:#b91c1c;font-weight:bold;margin-top:0.5rem;"></div>
+    </form>
+    <p style="text-align:center;margin-top:1rem;">
+      Already have an account? <a href="/login">Login</a>
+    </p>
+    <script>
+      document.getElementById('signupForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+        const errorDiv = document.getElementById('signupError');
+        errorDiv.textContent = '';
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          body: formData
+        });
+        if (res.status === 200 || res.redirected) {
+          // Show a success message before redirecting
+          const successDiv = document.createElement('div');
+          successDiv.textContent = 'Account created successfully! Redirecting to login...';
+          successDiv.style.color = '#15803d';
+          successDiv.style.fontWeight = 'bold';
+          successDiv.style.marginTop = '0.5rem';
+          form.parentNode.insertBefore(successDiv, form.nextSibling);
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 1200);
+        } else {
+          const result = await res.json();
+          errorDiv.textContent = result.error || 'Signup failed.';
+        }
+      });
+    </script>
+  </section>
+</Layout>

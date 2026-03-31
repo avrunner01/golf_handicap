@@ -1,0 +1,96 @@
+
+---
+import Layout from "../layouts/Layout.astro";
+import { supabaseClient } from "../lib/supabase";
+import { calculateHandicap } from "../lib/golfMath";
+
+const supabase = supabaseClient(Astro);
+const { data: { user } } = await supabase.auth.getUser();
+
+// Fetch the golfer's profile using the ID from the session
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('*')
+  .eq('id', user?.id)
+  .single();
+ 
+const { data: roundsData, error } = await supabase
+  .from('rounds')
+  .select('*')
+  .eq('profile_id', user?.id) // Matches your 'profile_id' column
+  .order('played_at', { ascending: false })
+  .limit(20); // get more rounds for handicap calc
+
+const rounds = roundsData || [];
+const differentials = rounds.map(r => r.differential).filter(d => typeof d === 'number');
+const liveHandicap = differentials.length > 0 ? calculateHandicap(differentials) : 'NH';
+---
+
+<Layout title="Your Stats" user={user}>
+  <div class="max-w-4xl mx-auto py-10 px-4" style="background: linear-gradient(135deg, #66ccff 0%, #b3e6ff 100%); min-height: 100vh; border-radius: 2rem;">
+    <div class="flex items-center justify-between mb-8">
+      <h1 class="text-3xl font-extrabold text-[#005c80]">Your Stats</h1>
+      <a href="/" class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Return to Home</a>
+    </div>
+    <div class="flex flex-col md:flex-row gap-8 mb-8">
+      <div class="flex justify-end mb-4 w-full">
+        <a href="/add-round" class="inline-block bg-[#0099cc] text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-[#005c80] transition">+ Add Round</a>
+      </div>
+      <div class="flex-1 bg-gradient-to-br from-[#b3e6ff] to-[#66ccff] rounded-2xl shadow-lg p-8 border border-[#66ccff] flex flex-col justify-between">
+        <h1 class="text-3xl font-extrabold text-[#005c80] mb-2">Welcome back, {profile?.username || 'Golfer'}!</h1>
+        <div class="mt-4">
+          <p class="text-xs text-[#3399cc] uppercase font-semibold">Current Handicap</p>
+          <p class="text-6xl font-black text-[#0099cc] drop-shadow-lg">{liveHandicap}</p>
+        </div>
+      </div>
+      <div class="flex-1 flex flex-col justify-center items-center">
+        <div class="w-full">
+          <div class="bg-[#e6f7ff] rounded-xl shadow p-6 border border-[#66ccff] flex flex-col items-center">
+            <svg class="w-8 h-8 text-[#0099cc] mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="#66ccff" />
+              <path d="M12 6v6l4 2" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p class="text-[#005c80] text-center">Keep posting your scores to see your handicap trend!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-[#e6f7ff] rounded-2xl shadow-lg border border-[#66ccff] p-8 mb-8">
+      <h2 class="text-xl font-bold text-[#005c80] mb-6 flex items-center gap-2">
+        <svg class="w-6 h-6 text-[#0099cc]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        Recent Rounds
+      </h2>
+      <div>
+        {!Array.isArray(rounds) || rounds.length === 0 ? (
+          <p class="text-[#66ccff] italic">No rounds posted yet.</p>
+        ) : (
+          <div class="grid gap-4">
+            {rounds.map(round => (
+              <div class="flex items-center justify-between p-4 bg-[#b3e6ff] border-l-4 border-[#66ccff] rounded-lg shadow-sm">
+                <div>
+                  <h4 class="font-bold text-[#005c80]">{round.course_name}</h4>
+                  <p class="text-xs text-[#0099cc] uppercase font-semibold">{round.played_at ? new Date(round.played_at).toLocaleDateString() : ''}</p>
+                </div>
+                <div class="flex gap-8 text-center">
+                  <div>
+                    <p class="text-[10px] text-[#0099cc] uppercase">Score</p>
+                    <p class="text-xl font-black text-[#005c80]">{round.gross_score ?? round.gross_score ?? '-'}</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-[#0099cc] uppercase">Diff</p>
+                    <p class="text-xl font-bold text-[#0099cc]">{round.differential}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+
+    <form action="/api/auth/signout" method="POST" class="flex justify-end">
+      <button class="px-6 py-2 rounded-lg bg-red-50 text-red-700 font-semibold hover:bg-red-100 transition">Sign Out</button>
+    </form>
+  </div>
+</Layout>

@@ -1,0 +1,59 @@
+
+---
+import Layout from '../layouts/Layout.astro';
+import { supabaseClient } from '../lib/supabase';
+
+const supabase = supabaseClient(Astro);
+const { data: { user } } = await supabase.auth.getUser();
+---
+
+<Layout title="Add Profile">
+  <div class="flex items-center justify-between max-w-md mx-auto mt-8">
+    <h1 class="text-2xl font-bold">Add Profile</h1>
+    <a href="/" class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Return to Home</a>
+  </div>
+  {user ? (
+    <>
+      <form id="profileForm" class="max-w-md mx-auto mt-4 p-4 bg-white rounded shadow">
+        <label class="block mb-2">
+          Username
+          <input name="username" type="text" required class="w-full border p-2 rounded" />
+        </label>
+        <label class="block mb-2">
+          Full Name
+          <input name="full_name" type="text" required class="w-full border p-2 rounded" />
+        </label>
+        <label class="block mb-2">
+          Current Handicap Index
+          <input name="current_handicap_index" type="number" step="0.1" required class="w-full border p-2 rounded" />
+        </label>
+        <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded">Add Profile</button>
+        <div id="profileError" class="mt-4 text-red-600 font-semibold"></div>
+      </form>
+      <script>
+        document.getElementById('profileForm').addEventListener('submit', async function(e) {
+          e.preventDefault();
+          const form = e.target;
+          const formData = new FormData(form);
+          const errorDiv = document.getElementById('profileError');
+          errorDiv.textContent = '';
+          const res = await fetch('/api/profiles/create', {
+            method: 'POST',
+            body: formData
+          });
+          const result = await res.json();
+          if (result.error) {
+            errorDiv.textContent = result.error;
+          } else {
+            window.location.href = '/dashboard';
+          }
+        });
+      </script>
+    </>
+  ) : (
+    <div class="max-w-md mx-auto mt-8 p-4 bg-yellow-100 border border-yellow-300 rounded text-yellow-900">
+      <p class="mb-2">You must be signed in to add a profile.</p>
+      <a href="/signup" class="underline text-blue-700">Sign up</a> or <a href="/login" class="underline text-blue-700">Log in</a>.
+    </div>
+  )}
+</Layout>

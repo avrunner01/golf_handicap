@@ -1,0 +1,60 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { supabaseClient } from '../lib/supabase';
+
+const supabase = supabaseClient(Astro);
+const { data: { user } } = await supabase.auth.getUser();
+
+let rounds = [];
+if (user) {
+  const { data } = await supabase
+    .from('rounds')
+    .select('id, course_name, played_at, gross_score')
+    .eq('profile_id', user.id)
+    .order('played_at', { ascending: false });
+  rounds = data || [];
+}
+---
+
+<Layout title="Delete Round">
+
+  <main class="max-w-2xl mx-auto py-10 px-4">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Delete a Round</h1>
+    {user ? (
+      <>
+        {rounds.length === 0 ? (
+          <p class="text-gray-600">No rounds to delete.</p>
+        ) : (
+          <ul class="space-y-4">
+            {rounds.map(round => (
+              <li class="flex items-center justify-between bg-white p-4 rounded shadow border">
+                <div>
+                  <div class="font-semibold">{round.course_name}</div>
+                  <div class="text-sm text-gray-500">{round.played_at ? new Date(round.played_at).toLocaleDateString() : ''}</div>
+                  <div class="text-sm text-gray-700">Score: {round.gross_score}</div>
+                </div>
+                <form on:submit={async (e) => {
+                  e.preventDefault();
+                  const res = await fetch(`/api/rounds/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: round.id })
+                  });
+                  if (res.ok) {
+                    window.location.reload();
+                  } else {
+                    alert('Failed to delete round.');
+                  }
+                }}>
+                  <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Delete</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </>
+    ) : (
+      <p class="text-red-600">You must be signed in to delete rounds.</p>
+    )}
+  </main>
+</Layout>

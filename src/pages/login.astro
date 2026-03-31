@@ -1,0 +1,63 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+<Layout title="Sign In | Golf Handicap">
+  <main class="flex min-h-screen items-center justify-center bg-green-50 px-4">
+    <div class="w-full max-w-md space-y-8 rounded-xl bg-white p-10 shadow-lg">
+      <div class="text-center">
+        <h2 class="text-3xl font-extrabold text-green-900">Golf Handicap Tracker</h2>
+        <p class="mt-2 text-gray-600">Sign in to track your scores</p>
+      </div>
+
+      <a href="/api/auth/google" 
+         class="flex w-full items-center justify-center gap-3 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+        <img src="/src/images/google-icon.png" class="h-5 w-5" alt="Google" />
+        Continue with Google
+      </a>
+
+      <div class="relative my-6">
+        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div>
+        <div class="relative flex justify-center text-sm"><span class="bg-white px-2 text-gray-500">Or continue with email</span></div>
+      </div>
+
+      <form id="signinForm" class="space-y-4">
+        <input type="email" name="email" placeholder="Email" class="w-full rounded-md border-gray-300 p-2 shadow-sm focus:border-green-500 focus:ring-green-500" required />
+        <input type="password" name="password" placeholder="Password" class="w-full rounded-md border-gray-300 p-2 shadow-sm focus:border-green-500 focus:ring-green-500" required />
+        <button type="submit" class="w-full rounded-md bg-green-600 py-2 text-white hover:bg-green-700">Sign In</button>
+          <div class="text-right mt-2">
+            <a href="/reset-password" class="text-green-700 hover:underline text-sm">Forgot Password?</a>
+          </div>
+        <div id="signinError" class="mt-2 text-red-600 font-semibold"></div>
+      </form>
+        <p class="text-center mt-4 text-sm text-gray-600">
+          Don't have an account? <a href="/signup" class="text-green-700 hover:underline font-semibold">Sign Up</a>
+        </p>
+        <script>
+          document.getElementById('signinForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            const errorDiv = document.getElementById('signinError');
+            errorDiv.textContent = '';
+            const res = await fetch('/api/auth/signin', {
+              method: 'POST',
+              body: formData
+            });
+            if (res.status === 200) {
+              // Show a success message before redirecting
+              const successDiv = document.createElement('div');
+              successDiv.textContent = 'Sign in successful! Redirecting...';
+              successDiv.className = 'mt-2 text-green-600 font-semibold text-center';
+              form.parentNode.insertBefore(successDiv, form.nextSibling);
+              setTimeout(() => {
+                window.location.href = '/dashboard';
+              }, 1200);
+            } else {
+              const result = await res.json();
+              errorDiv.textContent = result.error || 'Sign in failed.';
+            }
+          });
+        </script>
+    </div>
+  </main>
+</Layout>

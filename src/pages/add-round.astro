@@ -1,0 +1,60 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { supabaseClient } from "../lib/supabase";
+
+const supabase = supabaseClient(Astro);
+
+// Fetch courses and their tees for the dropdowns
+const { data: courses } = await supabase
+  .from('courses')
+  .select(`
+    id, 
+    name, 
+    tees (id, tee_name, color_code, rating, slope, par)
+  `);
+---
+
+<Layout title="Post a Score">
+  <main class="max-w-2xl mx-auto py-10 px-4">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Post New Round</h1>
+
+    <form action="/api/rounds/create" method="POST" class="space-y-6 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+      
+
+      <div class="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm mb-2">
+        <div class="flex justify-between items-center mb-1">
+          <label class="block text-sm font-semibold text-green-900">Select Course & Tee</label>
+          <a href="/add-course" class="text-xs text-green-700 hover:underline font-semibold">+ Add Course</a>
+        </div>
+        <select name="tee_id" required class="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600">
+          <option value="">-- Choose a Tee --</option>
+          {courses?.map(course => (
+            <optgroup label={course.name}>
+              {course.tees.map(tee => (
+                <option value={tee.id}>
+                  {tee.tee_name} (Rating: {tee.rating} / Slope: {tee.slope})
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm mb-2">
+          <label class="block text-sm font-semibold text-green-900 mb-1">Gross Score</label>
+          <input type="number" name="gross_score" required min="30" max="200"
+            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600" />
+        </div>
+        <div class="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm mb-2">
+          <label class="block text-sm font-semibold text-green-900 mb-1">Date Played</label>
+          <input type="date" name="played_at" value={new Date().toISOString().split('T')[0]}
+            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600" />
+        </div>
+      </div>
+
+      <button type="submit" class="w-full bg-green-600 text-white py-3 px-4 rounded-md font-semibold hover:bg-green-700 transition-colors">
+        Save Round
+      </button>
+    </form>
+  </main>
+</Layout>

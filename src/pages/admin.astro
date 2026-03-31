@@ -1,0 +1,155 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { supabaseClient } from "../lib/supabase";
+
+const supabase = supabaseClient(Astro);
+const { data: { user } } = await supabase.auth.getUser();
+
+// Check if user is admin (example: check email or a custom claim/role)
+const isAdmin = user && user.email === "avrunner01@gmail.com"; // Change as needed
+
+let users = [];
+let courses = [];
+let stats = { totalUsers: 0, totalRounds: 0, totalCourses: 0 };
+let allRounds = [];
+if (isAdmin) {
+  // Fetch all users
+  const { data: usersData } = await supabase.from('profiles').select('id, username, full_name');
+  users = usersData || [];
+
+  // Fetch all courses
+  const { data: coursesData } = await supabase.from('courses').select('id, name');
+  courses = coursesData || [];
+
+  // Fetch all rounds
+  const { data: roundsData } = await supabase
+    .from('rounds')
+    .select('id, course_name, played_at, gross_score, profile_id')
+    .order('played_at', { ascending: false });
+  allRounds = roundsData || [];
+
+  // Fetch site statistics
+  const { count: userCount } = await supabase.from('profiles').select('id', { count: 'exact', head: true });
+  const { count: roundCount } = await supabase.from('rounds').select('id', { count: 'exact', head: true });
+  const { count: courseCount } = await supabase.from('courses').select('id', { count: 'exact', head: true });
+  stats = {
+    totalUsers: userCount ?? users.length,
+    totalRounds: roundCount ?? 0,
+    totalCourses: courseCount ?? courses.length,
+  };
+}
+---
+
+<Layout title="Admin Dashboard">
+  <main class="max-w-2xl mx-auto py-10 px-4" style="background: linear-gradient(135deg, #e0f2fe 0%, #f0fdfa 100%); min-height: 100vh; border-radius: 2rem;">
+    <div class="flex items-center justify-between mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+      <a href="/" class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Return to Home</a>
+    </div>
+    {isAdmin ? (
+      <div class="space-y-8">
+        <p class="text-green-700 font-semibold">Welcome, Admin!</p>
+
+        <!-- View all users -->
+        <section>
+          <h2 class="text-xl font-bold mb-2">All Users</h2>
+          {users.length === 0 ? (
+            <p class="text-gray-600">No users found.</p>
+          ) : (
+            <ul class="divide-y">
+              {users.map(u => (
+                <li class="py-2"><b>{u.username}</b> ({u.full_name})</li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <!-- Manage courses -->
+        <section>
+          <h2 class="text-xl font-bold mb-2 mt-8">Courses</h2>
+          {courses.length === 0 ? (
+            <p class="text-gray-600">No courses found.</p>
+          ) : (
+            <ul class="divide-y">
+              {courses.map(c => (
+                <li class="py-2"><b>{c.name}</b></li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <!-- Site statistics -->
+        <section>
+          <h2 class="text-xl font-bold mb-2 mt-8">Site Statistics</h2>
+          <ul>
+            <li>Total Users: {stats.totalUsers ?? '-'}</li>
+            <li>Total Rounds: {stats.totalRounds ?? '-'}</li>
+            <li>Total Courses: {stats.totalCourses ?? '-'}</li>
+          </ul>
+        </section>
+
+        <!-- All rounds with delete -->
+        <section>
+          <h2 class="text-xl font-bold mb-2 mt-8">All Rounds</h2>
+          {allRounds.length === 0 ? (
+            <p class="text-gray-600">No rounds found.</p>
+          ) : (
+            <ul class="space-y-4">
+              {allRounds.map(round => (
+                <li class="flex items-center justify-between bg-white p-4 rounded shadow border">
+                  <div>
+                    <div class="font-semibold">{round.course_name}</div>
+                    <div class="text-sm text-gray-500">{round.played_at ? new Date(round.played_at).toLocaleDateString() : ''}</div>
+                    <div class="text-sm text-gray-700">Score: {round.gross_score}</div>
+                    <div class="text-xs text-gray-400">User ID: {round.profile_id}</div>
+                  </div>
+                  <form class="delete-round-form" data-round-id={round.id}>
+                    <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Delete</button>
+                  </form>
+                  <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                      // Show success message if present
+                      const msg = sessionStorage.getItem('deleteRoundSuccess');
+                      if (msg) {
+                        sessionStorage.removeItem('deleteRoundSuccess');
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'delete-success-message bg-green-100 text-green-800 px-4 py-2 rounded mb-4';
+                        alertDiv.innerText = msg;
+                        document.body.prepend(alertDiv);
+                        setTimeout(() => alertDiv.remove(), 3000);
+                      }
+                      document.querySelectorAll('.delete-round-form').forEach(form => {
+                        form.addEventListener('submit', async function (e) {
+                          e.preventDefault();
+                          const roundId = form.getAttribute('data-round-id');
+                          const res = await fetch('/api/rounds/delete', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: roundId })
+                          });
+                          if (res.ok) {
+                            sessionStorage.setItem('deleteRoundSuccess', 'Round deleted successfully!');
+                            window.location.reload();
+                          } else {
+                            let msg = 'Failed to delete round.';
+                            try {
+                              const result = await res.json();
+                              if (result.error) msg += '\n' + result.error;
+                            } catch {}
+                            alert(msg);
+                          }
+                        });
+                      });
+                    });
+                  </script>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    ) : (
+      <div class="text-red-600 font-semibold">Access denied. You are not an admin.</div>
+    )}
+  </main>
+</Layout>

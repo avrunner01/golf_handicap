@@ -1,0 +1,47 @@
+---
+interface Props {
+  scores: { date: string; differential: number }[];
+}
+const { scores } = Astro.props;
+
+// Sort by date and take the last 10-20 rounds
+const chartData = scores
+  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  .slice(-10);
+---
+
+<div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8">
+  <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Handicap Trend (Last 10 Rounds)</h3>
+  <canvas id="handicapChart"></canvas>
+</div>
+
+<script define:vars={{ chartData }}>
+  import Chart from 'chart.js/auto';
+
+  const ctx = document.getElementById('handicapChart');
+  
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartData.map(d => new Date(d.date).toLocaleDateString()),
+      datasets: [{
+        label: 'Differential',
+        data: chartData.map(d => d.differential),
+        borderColor: '#16a34a', // Tailwind green-600
+        backgroundColor: 'rgba(22, 163, 74, 0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 5,
+        pointBackgroundColor: '#16a34a'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: false, grid: { display: false } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+</script>

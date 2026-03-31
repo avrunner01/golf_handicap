@@ -1,11 +1,83 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import Layout from '../layouts/Layout.astro';
+import { supabaseClient } from '../lib/supabase';
+import { calculateHandicap } from '../lib/golfMath';
+
+const supabase = supabaseClient(Astro);
+const { data: { user } } = await supabase.auth.getUser();
+
+let profile = null;
+let liveHandicap = null;
+if (user) {
+	const { data } = await supabase
+		.from('profiles')
+		.select('*')
+		.eq('id', user.id)
+		.single();
+	profile = data;
+
+	// Fetch rounds and calculate live handicap
+	const { data: roundsData } = await supabase
+		.from('rounds')
+		.select('differential')
+		.eq('profile_id', user.id);
+	if (Array.isArray(roundsData)) {
+		const differentials = roundsData
+			.map(r => typeof r.differential === 'number' ? r.differential : Number(r.differential))
+			.filter(d => !isNaN(d));
+		if (differentials.length > 0) {
+			liveHandicap = calculateHandicap(differentials);
+		} else {
+			liveHandicap = 'NH';
+		}
+	}
+}
 ---
 
-<Layout>
-	<Welcome />
+<Layout user={user}>
+	 <section style="text-align:center; margin-top:3rem;">
+		 <script>
+			 document.addEventListener('DOMContentLoaded', function () {
+				 const msg = sessionStorage.getItem('handicapUpdated');
+				 if (msg) {
+					 sessionStorage.removeItem('handicapUpdated');
+					 const alertDiv = document.createElement('div');
+					 alertDiv.className = 'handicap-update-message bg-green-100 text-green-800 px-4 py-2 rounded mb-4';
+					 alertDiv.innerText = msg;
+					 document.body.prepend(alertDiv);
+					 setTimeout(() => alertDiv.remove(), 3000);
+				 }
+			 });
+		 </script>
+
+		<h1>Golf Handicap Tracker</h1>
+		{user && profile && profile.full_name && (
+			<p class="text-xl font-bold text-green-800 mt-2 mb-2">Welcome, {profile.full_name}!</p>
+		)}
+		<p>Welcome to your personal golf handicap app. Track your rounds, view your stats, and improve your game!</p>
+
+		{user && profile ? (
+			<div class="max-w-md mx-auto my-8 p-6 bg-green-50 border border-green-200 rounded-xl shadow">
+				   <!-- Welcome message removed as requested -->
+				<p class="text-gray-700 mb-1"><strong>Username:</strong> {profile.username}</p>
+				<p class="text-gray-700 mb-1"><strong>Handicap Index:</strong> {liveHandicap ?? 'NH'}</p>
+				   <a href="/dashboard" class="inline-block mt-4 bg-green-600 text-white px-4 py-2 rounded">Go to Dashboard</a>
+				{profile && profile.role === 'admin' && (
+					<a href="/admin" class="inline-block mt-4 bg-green-700 text-white px-4 py-2 rounded ml-2 font-bold">Admin</a>
+				)}
+			</div>
+		   ) : user && !profile ? (
+			   <></>
+		) : (
+			<nav style="margin-top:2rem;">
+				<a href="/add-round" style="margin-right:1.5rem;">Add Round</a>
+				<a href="/dashboard" style="margin-right:1.5rem;">Dashboard</a>
+				<a href="/login" style="margin-right:1.5rem;">Login</a>
+				{user && profile && profile.role === 'admin' && (
+					<a href="/admin" style="margin-right:1.5rem;color:#1a7f37;font-weight:bold;">Admin</a>
+				)}
+			</nav>
+		)}
+	</section>
 </Layout>
