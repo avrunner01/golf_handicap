@@ -3,6 +3,7 @@
 import Layout from "../layouts/Layout.astro";
 import { supabaseClient } from "../lib/supabase";
 import { calculateHandicap } from "../lib/golfMath";
+import "../styles/global.css";
 
 const supabase = supabaseClient(Astro);
 const { data: { user } } = await supabase.auth.getUser();

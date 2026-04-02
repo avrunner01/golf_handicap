@@ -6,7 +6,9 @@ import AstroPWA from '@kreisler/vite-pwa-astro'; // Use the fork here
 
 export default defineConfig({
   output: 'server',
-  adapter: netlify(),
+  adapter: netlify({
+    entrypointResolution: 'auto',
+  }),
   integrations: [
     tailwind(),
     AstroPWA({
