@@ -1,30 +1,11 @@
 import { defineConfig } from 'astro/config';
-import tailwind from '@astrojs/tailwind';
-import node from '@astrojs/node';
 import netlify from '@astrojs/netlify';
-import AstroPWA from '@kreisler/vite-pwa-astro'; // Use the fork here
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   output: 'server',
-  adapter: netlify({
-    entrypointResolution: 'auto',
-  }),
-  integrations: [
-    tailwind(),
-    AstroPWA({
-      /* manifest config from previous step */
-      manifest: {
-        name: 'Golf Handicap Tracker',
-        short_name: 'GolfHandy',
-        icons: [
-          {
-            src: 'golf-ball.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
-          }
-        ]
-      }
-    })
-  ],
+  adapter: netlify(), // Ensure there is a comma here
+  vite: {
+    plugins: [tailwindcss()],
+  },
 });
