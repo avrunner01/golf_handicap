@@ -1,4 +1,16 @@
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/entry"
-  status = 200
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # This is the correct way to specify Node 22 for the build and functions
+  NODE_VERSION = "22"
+
+[functions]
+  # Keep this empty or use it for other settings like 'included_files'
+  # Do NOT put node_version here
+
+[dev]
+  command = "npm run dev"
+  port = 8888
+  targetPort = 4321
