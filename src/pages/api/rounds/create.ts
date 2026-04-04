@@ -69,7 +69,7 @@ export const POST: APIRoute = async (context) => {
   // Set a sessionStorage flag for the home page update message
   const response = new Response(null, {
     status: 303,
-    headers: { 'Location': '/' }
+    headers: { 'Location': '/dashboard' }
   });
   response.headers.append('Set-Cookie', 'handicapUpdated=1; Path=/; Max-Age=10');
   return response;

@@ -12,5 +12,5 @@
 
 [dev]
   command = "npm run dev"
-  port = 4321
+  port = 8888
   targetPort = 4321

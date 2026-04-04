@@ -1,0 +1,21 @@
+---
+import { supabase } from '../lib/supabase';
+
+// Get the current session user
+const { data: { user } } = await supabase.auth.getUser();
+
+// Fetch the pre-calculated handicap from our new table
+const { data: handicapData } = await supabase
+  .from('user_handicaps')
+  .select('current_handicap')
+  .eq('profile_id', user.id)
+  .single();
+
+const displayHandicap = handicapData?.current_handicap ?? 'NH'; // NH = No Handicap
+---
+
+<div class="stats-card">
+  <h2>Your Handicap Index</h2>
+  <p class="text-4xl font-bold">{displayHandicap}</p>
+  <span class="text-sm">Updated automatically via WHS logic</span>
+</div>

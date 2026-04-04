@@ -12,7 +12,12 @@ export const POST: APIRoute = async (context) => {
       return new Response("Sign out failed", { status: 500 });
     }
     console.log("[Signout] Sign out successful, redirecting to /login");
-    return context.redirect("/login");
+    return new Response(null, {
+      status: 303,
+      headers: {
+        Location: "/login",
+      },
+    });
   } catch (err) {
     console.error("[Signout] Unexpected error:", err);
     return new Response("Unexpected error during sign out", { status: 500 });
