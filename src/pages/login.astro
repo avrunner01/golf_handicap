@@ -33,6 +33,11 @@ import Layout from "../layouts/Layout.astro";
           Don't have an account? <a href="/signup" class="text-green-700 hover:underline font-semibold">Sign Up</a>
         </p>
         <script>
+          // Remove 'code=' query param from URL if present
+          if (window.location.search.includes('code=')) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+
           document.getElementById('signinForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const form = e.target;
