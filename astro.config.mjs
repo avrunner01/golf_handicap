@@ -23,15 +23,15 @@ export default defineConfig({
           orientation: 'portrait',
           icons: [
             {
-              src: '/golf-ball.svg',
+              src: '/golf-ball.jpg',
               sizes: '192x192',
-              type: 'image/svg+xml',
+              type: 'image/jpeg',
               purpose: 'any maskable',
             },
             {
-              src: '/golf-ball.svg',
+              src: '/golf-ball.jpg',
               sizes: '512x512',
-              type: 'image/svg+xml',
+              type: 'image/jpeg',
               purpose: 'any maskable',
             },
             {
