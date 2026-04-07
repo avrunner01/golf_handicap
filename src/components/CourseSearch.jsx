@@ -1,20 +1,29 @@
 import { useState } from 'react';
 
 export default function CourseSearch({ onSelect }) {
+  const MIN_QUERY_LENGTH = 3;
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const handleSearch = async () => {
-    if (!query) return;
+    const normalizedQuery = query.trim();
+
+    if (normalizedQuery.length < MIN_QUERY_LENGTH) {
+      setHasSearched(false);
+      setResults([]);
+      return;
+    }
+
+    setHasSearched(true);
     setLoading(true);
     try {
       // Use local API route to avoid CORS issues and secure API key
-      const response = await fetch(`/api/golf-search?q=${encodeURIComponent(query)}`, {
+      const response = await fetch(`/api/golf-search?q=${encodeURIComponent(normalizedQuery)}`, {
         credentials: 'include'
       });
       const data = await response.json();
-      console.log(data);
       setResults(data.courses || []);
     } catch (err) {
       console.error("Search failed", err);
@@ -29,7 +38,21 @@ export default function CourseSearch({ onSelect }) {
         <input 
           type="text" 
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            const nextQuery = e.target.value;
+            setQuery(nextQuery);
+
+            if (nextQuery.trim().length < MIN_QUERY_LENGTH) {
+              setHasSearched(false);
+              setResults([]);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleSearch();
+            }
+          }}
           placeholder="Search course name..."
           className="border p-2 rounded w-full text-black"
         />
@@ -56,7 +79,7 @@ export default function CourseSearch({ onSelect }) {
         </ul>
       )}
 
-      {!loading && query && results.length === 0 && (
+      {!loading && hasSearched && query.trim().length >= MIN_QUERY_LENGTH && results.length === 0 && (
         <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded">
           Course not found. Enter manually, or try again.
         </div>

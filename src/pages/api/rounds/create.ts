@@ -3,13 +3,32 @@ import type { APIRoute } from "astro";
 import { supabaseClient } from "../../../lib/supabase.js";
 import { calculateHandicap } from "../../../lib/golfMath";
 
+const getPostValueMap = async (request: Request) => {
+  try {
+    const formData = await request.formData();
+    return Object.fromEntries(formData.entries());
+  } catch {
+    const rawBody = await request.text();
+    const params = new URLSearchParams(rawBody);
+    return Object.fromEntries(params.entries());
+  }
+};
+
 export const POST: APIRoute = async (context) => {
   const supabase = supabaseClient(context);
-  const formData = await context.request.formData();
-  
-  const tee_id = formData.get("tee_id");
-  const gross_score = parseInt(formData.get("gross_score") as string);
-  const played_at = formData.get("played_at");
+  const postValues = await getPostValueMap(context.request);
+
+  const teeIdRaw = typeof postValues.tee_id === "string" ? postValues.tee_id : "";
+  const grossScoreRaw = typeof postValues.gross_score === "string" ? postValues.gross_score : "";
+  const playedAtRaw = typeof postValues.played_at === "string" ? postValues.played_at : "";
+
+  const tee_id = teeIdRaw.trim();
+  const gross_score = Number.parseInt(grossScoreRaw, 10);
+  const played_at = playedAtRaw || new Date().toISOString().split("T")[0];
+
+  if (!tee_id || !Number.isFinite(gross_score)) {
+    return new Response("Invalid round submission.", { status: 400 });
+  }
 
   // Fetch the course name for the selected tee
   let course_name = '';
@@ -19,17 +38,27 @@ export const POST: APIRoute = async (context) => {
       .select('tee_name, course_id')
       .eq('id', tee_id)
       .single();
+
+    if (teeError) {
+      return new Response(teeError.message, { status: 500 });
+    }
+
     if (tee && tee.course_id) {
-      const { data: course } = await supabase
+      const { data: course, error: courseError } = await supabase
         .from('courses')
         .select('name')
         .eq('id', tee.course_id)
         .single();
+
+      if (courseError) {
+        return new Response(courseError.message, { status: 500 });
+      }
+
       course_name = course?.name || '';
     }
   }
 
-  // Get current user
+  // Get current authenticated user from Supabase Auth service
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return context.redirect("/login");

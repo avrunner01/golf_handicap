@@ -128,9 +128,17 @@ export default function AddRound({ courses: initialCourses }) {
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600" />
           </div>
         </div>
-        <button type="submit" className="w-full bg-green-600 text-white py-3 px-4 rounded-md font-semibold hover:bg-green-700 transition-colors">
-          Save Round
-        </button>
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <a
+            href="/dashboard"
+            className="w-full rounded-md border border-gray-300 bg-white py-3 px-4 text-center font-semibold text-gray-700 hover:bg-gray-50 sm:w-auto"
+          >
+            Cancel
+          </a>
+          <button type="submit" className="w-full bg-green-600 text-white py-3 px-4 rounded-md font-semibold hover:bg-green-700 transition-colors sm:w-auto">
+            Save Round
+          </button>
+        </div>
       </form>
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -138,6 +146,15 @@ export default function AddRound({ courses: initialCourses }) {
             <button onClick={() => setShowModal(false)} className="absolute top-2 right-2 text-gray-500 hover:text-gray-700">&times;</button>
             <h2 className="text-lg font-bold mb-4">Search/Add Course</h2>
             <CourseSearch onSelect={handleCourseSelect} />
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

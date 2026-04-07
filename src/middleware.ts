@@ -12,12 +12,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Only run session check on protected routes to save performance
   if (isProtectedRoute) {
     const supabase = supabaseClient(context);
-    
-    // Check for existing session
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
-    // If no session or error, redirect to login
-    if (!session || error) {
+    // If no authenticated user or error, redirect to login
+    if (!user || error) {
       return context.redirect("/login?error=unauthorized");
     }
   }
