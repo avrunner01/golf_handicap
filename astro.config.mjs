@@ -3,10 +3,12 @@ import { defineConfig } from 'astro/config';
 import netlify from '@astrojs/netlify';
 import tailwindcss from '@tailwindcss/vite';
 import VitePWA from '@vite-pwa/astro';
+import react from '@astrojs/react';
 
 export default defineConfig({
   output: 'server',
   adapter: netlify(), // Ensure there is a comma here
+  integrations: [react()],
   vite: {
     plugins: [
       tailwindcss(),
@@ -35,13 +37,13 @@ export default defineConfig({
               purpose: 'any maskable',
             },
             {
-              src: '/favicon.png',
+              src: '/golf-ball.jpg',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any maskable',
             },
             {
-              src: '/favicon.png',
+              src: '/golf-ball.jpg',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any maskable',

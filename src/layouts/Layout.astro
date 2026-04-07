@@ -1,5 +1,11 @@
 ---
 import "../styles/global.css";
+import Footer from '../components/Footer.astro';
+import { supabaseClient } from "../lib/supabase";
+
+const supabase = supabaseClient(Astro);
+const { data: { user: sessionUser } } = await supabase.auth.getUser();
+const user = Astro.props.user ?? sessionUser;
 ---
 <!doctype html>
 <html lang="en">
@@ -7,7 +13,7 @@ import "../styles/global.css";
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" type="image/svg+xml" href="/golf-ball.svg" />
-		<link rel="icon" type="image/png" href="/favicon.png" sizes="32x32" />
+		<link rel="icon" type="image/png" href="/golf-ball.jpg" sizes="32x32" />
 		<link rel="apple-touch-icon" href="/golf-ball.svg" sizes="180x180" />
 		<link rel="manifest" href="/site.webmanifest" />
 		<meta name="generator" content={Astro.generator} />
@@ -29,8 +35,9 @@ import "../styles/global.css";
 								</a>
 								<a href="/videos" class="font-semibold text-blue-700 hover:text-green-700 transition-colors">Videos</a>
 								<a href="/playing" class="font-semibold text-blue-700 hover:text-green-700 transition-colors">Playing</a>
+								<a href="/help" class="font-semibold text-blue-700 hover:text-green-700 transition-colors">Help</a>
 							</div>
-							{Astro.props.user ? (
+							{user ? (
 								<form action="/api/auth/signout" method="POST">
 									<button type="submit" class="rounded-lg bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 py-2 font-bold shadow hover:from-pink-600 hover:to-red-600 transition-all">Sign Out</button>
 								</form>
@@ -41,9 +48,10 @@ import "../styles/global.css";
 
 		</nav>
 		<slot />
+		<Footer />
 	</body>
-</html>
 
+</html>
 <style>
 html,
 body {

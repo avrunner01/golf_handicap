@@ -1,0 +1,55 @@
+---
+// src/components/CourseSearch.astro
+---
+
+<div class="search-container">
+  <input 
+    type="text" 
+    id="course-input" 
+    placeholder="Search for a course (e.g. Oxmoor Valley)..." 
+    autocomplete="off"
+  />
+  <ul id="results-list"></ul>
+</div>
+
+<script>
+  let timeout: ReturnType<typeof setTimeout>;
+  const input = document.querySelector('#course-input') as HTMLInputElement;
+  const list = document.querySelector('#results-list');
+
+  input?.addEventListener('input', (e) => {
+    clearTimeout(timeout);
+    const query = (e.target as HTMLInputElement).value;
+
+    if (query.length < 3) {
+      if (list) list.innerHTML = '';
+      return;
+    }
+
+    // Wait 300ms after typing stops to fetch
+    timeout = setTimeout(async () => {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const { courses } = await res.json();
+
+      if (list) {
+        list.innerHTML = courses.map((c: any) => `
+          <li>
+            <button class="result-item" data-id="${c.id}">
+              <strong>${c.club_name}</strong>
+              <span>${c.location.city}, ${c.location.state}</span>
+            </button>
+          </li>
+        `).join('');
+      }
+    }, 300);
+  });
+</script>
+
+<style>
+  .search-container { max-width: 400px; margin: 2rem auto; }
+  input { width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid #ccc; }
+  ul { list-style: none; padding: 0; margin-top: 0.5rem; border: 1px solid #eee; }
+  .result-item { width: 100%; text-align: left; padding: 0.5rem; background: none; border: none; cursor: pointer; }
+  .result-item:hover { background: #f0f4f8; }
+  .result-item span { display: block; font-size: 0.8rem; color: #666; }
+</style>
