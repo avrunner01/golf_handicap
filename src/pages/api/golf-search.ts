@@ -1,9 +1,26 @@
 // src/pages/api/search.ts
 import type { APIRoute } from 'astro';
 
+const resolveGolfApiKey = () => {
+  const candidates = [
+    import.meta.env.GOLF_COURSE_API_KEY,
+    import.meta.env.GOLF_API_KEY,
+    process.env.GOLF_COURSE_API_KEY,
+    process.env.GOLF_API_KEY,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  return '';
+};
+
 export const GET: APIRoute = async ({ url }) => {
   const query = (url.searchParams.get('q') || '').trim();
-  const apiKey = import.meta.env.GOLF_COURSE_API_KEY || import.meta.env.GOLF_API_KEY;
+  const apiKey = resolveGolfApiKey();
 
   if (!query) {
     return new Response(JSON.stringify({ error: "Missing query" }), {
