@@ -14,6 +14,32 @@ const parseNumber = (value: unknown) => {
   return Number.isFinite(numericValue) ? numericValue : null;
 };
 
+const normalizeLocation = (value: unknown) => {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (typeof value === "object") {
+    const locationRecord = value as Record<string, unknown>;
+    const parts = [
+      normalizeString(locationRecord.city),
+      normalizeString(locationRecord.state),
+      normalizeString(locationRecord.country),
+    ].filter(Boolean);
+
+    if (parts.length > 0) {
+      return parts.join(", ");
+    }
+  }
+
+  return null;
+};
+
 const buildTees = (payload: Record<string, unknown>) => {
   const providedTees = Array.isArray(payload.tees) ? payload.tees : null;
 
@@ -70,7 +96,7 @@ export const POST: APIRoute = async (context) => {
     : Object.fromEntries(await context.request.formData());
 
   const course_name = normalizeString(payload.course_name);
-  const location = payload.location ?? null;
+  const location = normalizeLocation(payload.location);
   const tees = buildTees(payload);
 
   if (!course_name) {
@@ -91,17 +117,17 @@ export const POST: APIRoute = async (context) => {
       : context.redirect("/login?error=unauthorized");
   }
 
-  const { data: existingCourse, error: existingCourseError } = await supabase
+  const { data: existingCourses, error: existingCourseError } = await supabase
     .from("courses")
     .select("id, name")
     .eq("name", course_name)
-    .maybeSingle();
+    .limit(1);
 
   if (existingCourseError) {
     return new Response(existingCourseError.message, { status: 500 });
   }
 
-  let course = existingCourse;
+  let course = existingCourses?.[0] ?? null;
 
   if (!course) {
     const { data: insertedCourse, error: courseError } = await supabase
