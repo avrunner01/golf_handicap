@@ -36,6 +36,7 @@ const user = Astro.props.user ?? sessionUser;
 								<a href="/videos" class="font-semibold text-blue-700 hover:text-green-700 transition-colors">Videos</a>
 								<a href="/playing" class="font-semibold text-blue-700 hover:text-green-700 transition-colors">Playing</a>
 								<a href="/help" class="font-semibold text-blue-700 hover:text-green-700 transition-colors">Help</a>
+								<a href="/contact" class="font-semibold text-blue-700 hover:text-green-700 transition-colors">Contact</a>
 							</div>
 							{user ? (
 								<form action="/api/auth/signout" method="POST">
