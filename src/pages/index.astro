@@ -7,6 +7,7 @@ import { calculateHandicap } from '../lib/golfMath';
 
 const supabase = supabaseClient(Astro);
 const { data: { user } } = await supabase.auth.getUser();
+const contactSubmitted = Astro.url.searchParams.get('contact') === 'sent';
 
 let profile = null;
 let liveHandicap = null;
@@ -38,8 +39,23 @@ if (user) {
 
 <Layout user={user}>
 	 <section style="text-align:center; margin-top:3rem;">
+		 {contactSubmitted && (
+			 <div id="contact-success-message" class="mx-auto mb-6 max-w-2xl rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800 font-bold shadow-sm">
+				 Your message was submitted successfully.
+			 </div>
+		 )}
 		 <script>
 			 document.addEventListener('DOMContentLoaded', function () {
+				 const contactSuccessMessage = document.getElementById('contact-success-message');
+				 if (contactSuccessMessage) {
+					 setTimeout(() => {
+						 contactSuccessMessage.remove();
+						 const currentUrl = new URL(window.location.href);
+						 currentUrl.searchParams.delete('contact');
+						 window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+					 }, 5000);
+				 }
+
 				 const msg = sessionStorage.getItem('handicapUpdated');
 				 if (msg) {
 					 sessionStorage.removeItem('handicapUpdated');

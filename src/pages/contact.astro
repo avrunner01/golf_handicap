@@ -1,0 +1,58 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const homeRedirect = new URL('/?contact=sent', Astro.url).toString();
+---
+
+<Layout title="Contact">
+  <section class="max-w-xl mx-auto py-10 px-4">
+    <h1 class="text-3xl font-bold mb-4 text-green-700">Contact</h1>
+    <p class="mb-6 text-gray-700">Have a question, suggestion, or bug to report? Fill in the form below and we'll get back to you as soon as possible.</p>
+    <form
+      name="contact"
+      method="POST"
+      action="https://formsubmit.co/avrunner01@gmail.com"
+      class="space-y-5 bg-white p-8 rounded-xl shadow-sm border border-gray-100"
+    >
+      <input type="hidden" name="_subject" value="GolfHandicap contact form" />
+      <input type="hidden" name="_next" value={homeRedirect} />
+      <input type="text" name="_honey" class="hidden" />
+      <div>
+        <label class="block text-sm font-semibold text-green-900 mb-1" for="name">Name</label>
+        <input
+          id="name"
+          type="text"
+          name="name"
+          required
+          class="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-green-900 mb-1" for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          name="email"
+          required
+          class="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-green-900 mb-1" for="message">Message</label>
+        <textarea
+          id="message"
+          name="message"
+          rows="5"
+          required
+          class="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
+        ></textarea>
+      </div>
+      <button
+        type="submit"
+        class="w-full bg-green-600 text-white py-3 px-4 rounded-md font-semibold hover:bg-green-700 transition-colors"
+      >
+        Send Message
+      </button>
+    </form>
+  </section>
+</Layout>
