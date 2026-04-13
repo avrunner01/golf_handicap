@@ -10,7 +10,8 @@ export const GET: APIRoute = async (context) => {
       name,
       location,
       tees (id, tee_name, color_code, rating, slope, par)
-    `);
+    `)
+    .order('name', { ascending: true });
   if (error) {
     // Log the error for debugging
     console.error('Supabase error in /api/courses/list:', error);

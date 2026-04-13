@@ -11,7 +11,8 @@ const { data: courses } = await supabase
     id, 
     name, 
     tees (id, tee_name, color_code, rating, slope, par)
-  `);
+  `)
+  .order('name', { ascending: true });
 ---
 
 
