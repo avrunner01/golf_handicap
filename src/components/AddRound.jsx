@@ -16,6 +16,7 @@ export default function AddRound({ courses: initialCourses }) {
   const [showModal, setShowModal] = useState(false);
   const [courses, setCourses] = useState(initialCourses || []);
   const [selectedTeeId, setSelectedTeeId] = useState("");
+  const [selectedCourseName, setSelectedCourseName] = useState("");
   const selectRef = React.useRef(null);
 
   // Refetch courses from API (client-side)
@@ -34,6 +35,7 @@ export default function AddRound({ courses: initialCourses }) {
 
   const handleCourseSelect = async (course) => {
     setShowModal(false);
+    console.log("Course selected:", JSON.stringify(course, null, 2));
     const tees = getSearchResultTees(course)
       .map((tee) => ({
         tee_name: tee.tee_name || "",
@@ -49,8 +51,14 @@ export default function AddRound({ courses: initialCourses }) {
       return;
     }
 
+    const clubName = course.club_name || course.name || "";
+    const courseName = course.course_name || "";
+    const fullName = clubName && courseName && clubName !== courseName
+      ? `${clubName} - ${courseName}`
+      : clubName || courseName;
+
     const payload = {
-      course_name: course.course_name || course.club_name || course.name || "",
+      course_name: fullName || "",
       location: course.location || null,
       tees,
     };
@@ -78,8 +86,10 @@ export default function AddRound({ courses: initialCourses }) {
 
     if (result.selectedTeeId) {
       setSelectedTeeId(String(result.selectedTeeId));
+      setSelectedCourseName(payload.course_name);
     } else if (updatedCourse && updatedCourse.tees.length > 0) {
       setSelectedTeeId(String(updatedCourse.tees[0].id));
+      setSelectedCourseName(updatedCourse.name);
     }
 
     setTimeout(() => {
@@ -92,6 +102,16 @@ export default function AddRound({ courses: initialCourses }) {
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Post New Round</h1>
       <form action="/api/rounds/create" method="POST" className="space-y-6 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm mb-2">
+          <label className="block text-sm font-semibold text-green-900 mb-1">Course Name</label>
+          <input
+            type="text"
+            readOnly
+            value={selectedCourseName}
+            placeholder="Select a tee below to populate"
+            className="block w-full rounded-md border-gray-300 bg-white shadow-sm text-gray-700"
+          />
+        </div>
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm mb-2">
           <div className="flex justify-between items-center mb-1">
             <label className="block text-sm font-semibold text-green-900">Select Course & Tee</label>
             <a href="#" onClick={handleAddCourseClick} className="text-xs text-green-700 hover:underline font-semibold">+ Add Course</a>
@@ -101,7 +121,12 @@ export default function AddRound({ courses: initialCourses }) {
             required
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
             value={selectedTeeId}
-            onChange={e => setSelectedTeeId(e.target.value)}
+            onChange={e => {
+              const teeId = e.target.value;
+              setSelectedTeeId(teeId);
+              const found = courses?.find(c => c.tees.some(t => String(t.id) === teeId));
+              setSelectedCourseName(found ? found.name : "");
+            }}
             ref={selectRef}
           >
             <option value="">-- Choose a Tee --</option>

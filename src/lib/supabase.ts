@@ -1,7 +1,7 @@
 import { createServerClient, parseCookieHeader } from '@supabase/ssr'
 
 export const supabaseClient = (context: any) => {
-  return createServerClient(
+  const client = createServerClient(
     import.meta.env.SUPABASE_URL,
     import.meta.env.SUPABASE_ANON_KEY,
     {
@@ -19,5 +19,20 @@ export const supabaseClient = (context: any) => {
         },
       },
     }
-  )
+  );
+
+  // Wrap getUser to handle stale refresh tokens gracefully
+  const originalGetUser = client.auth.getUser.bind(client.auth);
+  client.auth.getUser = async (...args: any[]) => {
+    const result = await originalGetUser(...args);
+    if (result.error?.code === 'refresh_token_not_found') {
+      // Clear stale auth cookies so the user gets a clean login
+      try {
+        await client.auth.signOut();
+      } catch (_) {}
+    }
+    return result;
+  };
+
+  return client;
 }

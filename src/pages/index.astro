@@ -6,7 +6,11 @@ import { supabaseClient } from '../lib/supabase';
 import { calculateHandicap } from '../lib/golfMath';
 
 const supabase = supabaseClient(Astro);
-const { data: { user } } = await supabase.auth.getUser();
+let user = null;
+try {
+	const { data, error } = await supabase.auth.getUser();
+	if (!error) user = data.user;
+} catch (_) {}
 const contactSubmitted = Astro.url.searchParams.get('contact') === 'sent';
 
 let profile = null;
@@ -38,7 +42,25 @@ if (user) {
 ---
 
 <Layout user={user}>
-	 <section style="text-align:center; margin-top:3rem;">
+	 <section class="home-hero">
+		{!user && (
+			<nav style="margin: 0 0 1rem 0;">
+				<a href="/add-round" class="quick-link" style="margin-right:1.5rem;font-weight:700;">Add Round</a>
+				<a href="/dashboard" class="quick-link" style="margin-right:1.5rem;font-weight:700;">Dashboard</a>
+				<a href="/login" class="quick-link" style="margin-right:1.5rem;font-weight:700;">Login</a>
+			</nav>
+		)}
+
+		<div class="hero-visual" aria-hidden="true">
+			<div class="hero-glow"></div>
+			<img
+				src="/golfer_1.jpg"
+				alt="Golfer mid-swing on a golf course"
+				class="swing-image"
+				loading="eager"
+			/>
+		</div>
+
 		 {contactSubmitted && (
 			 <div id="contact-success-message" class="mx-auto mb-6 max-w-2xl rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800 font-bold shadow-sm">
 				 Your message was submitted successfully.
@@ -67,7 +89,6 @@ if (user) {
 				 }
 			 });
 		 </script>
-
 		<h1>Golf Handicap Tracker</h1>
 		{user && profile && profile.full_name && (
 			<p class="text-xl font-bold text-green-800 mt-2 mb-2">Welcome, {profile.full_name}!</p>
@@ -77,7 +98,7 @@ if (user) {
 		{user && profile ? (
 			<div class="max-w-md mx-auto my-8 p-6 bg-green-50 border border-green-200 rounded-xl shadow">
 				   <!-- Welcome message removed as requested -->
-				<p class="text-gray-700 mb-1"><strong>Username:</strong> {profile.username}</p>
+				<p class="text-gray-700 mb-1"><strong>Username:</strong> {profile.username || profile.full_name || user?.email || 'N/A'}</p>
 				<p class="text-gray-700 mb-1"><strong>Handicap Index:</strong> {liveHandicap ?? 'NH'}</p>
 				   <a href="/dashboard" class="inline-block mt-4 bg-green-600 text-white px-4 py-2 rounded">Go to Dashboard</a>
 				{profile && profile.role === 'admin' && (
@@ -87,14 +108,66 @@ if (user) {
 		   ) : user && !profile ? (
 			   <></>
 		) : (
-			<nav style="margin-top:2rem;">
-				<a href="/add-round" style="margin-right:1.5rem;">Add Round</a>
-				<a href="/dashboard" style="margin-right:1.5rem;">Dashboard</a>
-				<a href="/login" style="margin-right:1.5rem;">Login</a>
-				{user && profile && profile.role === 'admin' && (
-					<a href="/admin" style="margin-right:1.5rem;color:#1a7f37;font-weight:bold;">Admin</a>
-				)}
-			</nav>
+			<></>
 		)}
 	</section>
+
+	<style>
+		.home-hero {
+			text-align: center;
+			margin-top: 0;
+			padding: 0 1rem 0;
+		}
+
+		.hero-visual {
+			position: relative;
+			max-width: 780px;
+			margin: 0 auto 1.5rem;
+			animation: heroFade 700ms ease-out;
+		}
+
+		.hero-glow {
+			position: absolute;
+			inset: auto 6% -10% 6%;
+			height: 34%;
+			background: radial-gradient(circle at center, rgba(34, 197, 94, 0.24), rgba(34, 197, 94, 0));
+			filter: blur(8px);
+			pointer-events: none;
+		}
+
+		.swing-image {
+			display: block;
+			width: 100%;
+			height: clamp(220px, 34vw, 360px);
+			object-fit: cover;
+			border-radius: 18px;
+			box-shadow: 0 18px 40px rgba(11, 41, 22, 0.22);
+			animation: swingFloat 3.6s ease-in-out infinite;
+		}
+
+		@keyframes swingFloat {
+			0%,
+			100% {
+				transform: translateY(0px);
+			}
+			50% {
+				transform: translateY(-6px);
+			}
+		}
+
+		@keyframes heroFade {
+			from {
+				opacity: 0;
+				transform: translateY(12px);
+			}
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		.quick-link:hover {
+			text-decoration: underline;
+		}
+	</style>
 </Layout>

@@ -11,23 +11,27 @@ export const POST: APIRoute = async (context) => {
   const updated_at = new Date().toISOString();
 
   // Get current user
-  const { data: { user } } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (!error) user = data.user;
+  } catch (_) {}
   if (!user) {
     return context.redirect('/login');
   }
 
-  // Insert profile with user id
+  // Upsert profile - insert or update if already exists
   const { data, error } = await supabase
     .from('profiles')
-    .insert([
+    .upsert([
       {
-        id: user.id, // associate profile with auth user id
+        id: user.id,
         username,
         full_name,
         current_handicap_index,
         updated_at
       }
-    ])
+    ], { onConflict: 'id' })
     .select()
     .single();
 

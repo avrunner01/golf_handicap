@@ -47,12 +47,20 @@ const homeRedirect = new URL('/?contact=sent', Astro.url).toString();
           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
         ></textarea>
       </div>
-      <button
-        type="submit"
-        class="w-full bg-green-600 text-white py-3 px-4 rounded-md font-semibold hover:bg-green-700 transition-colors"
-      >
-        Send Message
-      </button>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <a
+          href="/"
+          class="w-full inline-flex items-center justify-center bg-white text-green-700 py-3 px-4 rounded-md font-semibold border border-green-600 hover:bg-green-50 transition-colors"
+        >
+          Cancel
+        </a>
+        <button
+          type="submit"
+          class="w-full bg-green-600 text-white py-3 px-4 rounded-md font-semibold hover:bg-green-700 transition-colors"
+        >
+          Send Message
+        </button>
+      </div>
     </form>
   </section>
 </Layout>

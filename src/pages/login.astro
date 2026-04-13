@@ -23,7 +23,10 @@ import Layout from "../layouts/Layout.astro";
       <form id="signinForm" class="space-y-4">
         <input type="email" name="email" placeholder="Email" class="w-full rounded-md border-gray-300 p-2 shadow-sm focus:border-green-500 focus:ring-green-500" required />
         <input type="password" name="password" placeholder="Password" class="w-full rounded-md border-gray-300 p-2 shadow-sm focus:border-green-500 focus:ring-green-500" required />
-        <button type="submit" class="w-full rounded-md bg-green-600 py-2 text-white hover:bg-green-700">Sign In</button>
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <a href="/" class="w-full rounded-md border border-green-600 bg-white py-2 text-center font-medium text-green-700 hover:bg-green-50">Cancel</a>
+          <button type="submit" class="w-full rounded-md bg-green-600 py-2 text-white hover:bg-green-700">Sign In</button>
+        </div>
           <div class="text-right mt-2">
             <a href="/reset-password" class="text-green-700 hover:underline text-sm">Forgot Password?</a>
           </div>
