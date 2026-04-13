@@ -31,23 +31,23 @@ const user = Astro.props.user ?? sessionUser;
 		<title>GolfHandicapBasics ⛳</title>
 	</head>
 	<body>
-						<nav class="sticky top-0 z-50 bg-linear-to-r from-green-700 via-emerald-600 to-cyan-600 shadow-lg flex items-center justify-between px-8 py-4 mb-8 border-b border-emerald-800">
+						<nav class="sticky top-0 z-50 bg-linear-to-r from-blue-900 via-blue-700 to-sky-600 shadow-lg flex items-center justify-between px-8 py-4 mb-8 border-b border-blue-950">
 							<div class="flex gap-8 items-center">
-								<a href="/" class="font-extrabold text-2xl text-white tracking-tight hover:text-emerald-100 hover:underline transition-colors flex items-center gap-2">
+								<a href="/" class="font-extrabold text-2xl text-white tracking-tight hover:text-sky-100 hover:underline transition-colors flex items-center gap-2">
 									<img src="/golf-ball.svg" alt="Golf Ball Logo" width="32" height="32" class="inline-block align-middle" />
 									GolfHandicap Home
 								</a>
-								<a href="/videos" class="font-bold text-white hover:text-emerald-100 hover:underline transition-colors">Videos</a>
-								<a href="/playing" class="font-bold text-white hover:text-emerald-100 hover:underline transition-colors">Playing</a>
-								<a href="/help" class="font-bold text-white hover:text-emerald-100 hover:underline transition-colors">Help</a>
-								<a href="/contact" class="font-bold text-white hover:text-emerald-100 hover:underline transition-colors">Contact</a>
+								<a href="/videos" class="font-bold text-white hover:text-sky-100 hover:underline transition-colors">Videos</a>
+								<a href="/playing" class="font-bold text-white hover:text-sky-100 hover:underline transition-colors">Playing</a>
+								<a href="/help" class="font-bold text-white hover:text-sky-100 hover:underline transition-colors">Help</a>
+								<a href="/contact" class="font-bold text-white hover:text-sky-100 hover:underline transition-colors">Contact</a>
 							</div>
 							{user ? (
 								<form action="/api/auth/signout" method="POST">
-									<button type="submit" class="rounded-lg bg-white text-red-600 px-5 py-2 font-extrabold shadow hover:bg-red-50 transition-all">Sign Out</button>
+									<button type="submit" class="rounded-lg bg-white text-blue-800 px-5 py-2 font-extrabold shadow hover:bg-sky-50 transition-all">Sign Out</button>
 								</form>
 							) : (
-								<a href="/login" class="rounded-lg bg-white text-emerald-700 px-5 py-2 font-extrabold shadow hover:bg-emerald-50 transition-all">Signin</a>
+								<a href="/login" class="rounded-lg bg-white text-blue-800 px-5 py-2 font-extrabold shadow hover:bg-sky-50 transition-all">Signin</a>
 							)}
 						</nav>
 		<slot />
@@ -59,7 +59,7 @@ const user = Astro.props.user ?? sessionUser;
 html,
 body {
 	margin: 0;
-	background: linear-gradient(135deg, #e0f7fa 0%, #f1f8e9 100%);
+	background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 52%, #f0f9ff 100%);
 }
 </style>
 

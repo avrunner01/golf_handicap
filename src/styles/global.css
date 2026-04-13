@@ -1,1 +1,49 @@
 @import "tailwindcss";
+
+/* Site-wide Malibu blue theme overrides */
+.text-green-700,
+.text-green-800,
+.text-green-900 {
+	color: #0f3f8f !important;
+}
+
+.bg-green-50 {
+	background-color: #eff6ff !important;
+}
+
+.bg-green-100 {
+	background-color: #dbeafe !important;
+}
+
+.bg-green-600,
+.bg-green-700 {
+	background-color: #1f5eb8 !important;
+}
+
+.border-green-100,
+.border-green-200,
+.border-green-600 {
+	border-color: #93c5fd !important;
+}
+
+.hover\:bg-green-700:hover {
+	background-color: #1d4f99 !important;
+}
+
+.hover\:bg-green-50:hover {
+	background-color: #dbeafe !important;
+}
+
+.hover\:text-green-700:hover {
+	color: #1e3a8a !important;
+}
+
+.focus\:border-green-500:focus,
+.focus\:border-green-600:focus {
+	border-color: #2563eb !important;
+}
+
+.focus\:ring-green-500:focus,
+.focus\:ring-green-600:focus {
+	--tw-ring-color: #2563eb !important;
+}
