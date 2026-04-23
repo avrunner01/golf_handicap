@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@astrojs/netlify": "^7.0.6",
-    "@astrojs/node": "^10.0.4",
+    "@astrojs/node": "^10.0.5",
     "@tailwindcss/vite": "^4.2.2",
     "@vite-pwa/astro": "^1.2.0",
     "astro": "^6.1.3",
