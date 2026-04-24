@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { supabaseAdmin, supabaseClient } from '../../../lib/supabase';
+import { supabaseClient, trySupabaseAdmin } from '../../../lib/supabase';
 
 export const POST: APIRoute = async (context) => {
   const supabase = supabaseClient(context);
@@ -33,7 +33,13 @@ export const POST: APIRoute = async (context) => {
       updated_at: new Date().toISOString(),
     };
     // Try to insert, if conflict, update (use service-role to bypass trigger RLS)
-    const db = supabaseAdmin();
+    const db = trySupabaseAdmin();
+    if (!db) {
+      return new Response(JSON.stringify({ error: 'Server is missing SUPABASE_SERVICE_ROLE_KEY.' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     const { error: insertError } = await (db as any).from('profiles').insert(profile, { onConflict: 'id' });
     if (insertError && insertError.message && insertError.message.includes('duplicate key value')) {
       // Profile exists, update it

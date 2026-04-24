@@ -13,6 +13,14 @@ export const supabaseAdmin = () => {
   return _adminClient;
 };
 
+export const trySupabaseAdmin = () => {
+  try {
+    return supabaseAdmin();
+  } catch {
+    return null;
+  }
+};
+
 export const supabaseClient = (context: any) => {
   const client = createServerClient(
     import.meta.env.SUPABASE_URL,

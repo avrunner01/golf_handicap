@@ -1,6 +1,6 @@
 // API endpoint to create a new golfer profile
 import type { APIRoute } from 'astro';
-import { supabaseAdmin, supabaseClient } from '../../../lib/supabase';
+import { supabaseClient, trySupabaseAdmin } from '../../../lib/supabase';
 
 export const POST: APIRoute = async (context) => {
   const supabase = supabaseClient(context);
@@ -21,7 +21,13 @@ export const POST: APIRoute = async (context) => {
   }
 
   // Upsert profile - insert or update if already exists (use service-role to bypass trigger RLS)
-  const db = supabaseAdmin();
+  const db = trySupabaseAdmin();
+  if (!db) {
+    return new Response(JSON.stringify({ error: 'Server is missing SUPABASE_SERVICE_ROLE_KEY.' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   const { data, error } = await (db as any)
     .from('profiles')
     .upsert([

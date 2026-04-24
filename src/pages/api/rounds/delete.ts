@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { supabaseAdmin, supabaseClient } from '../../../lib/supabase';
+import { supabaseClient, trySupabaseAdmin } from '../../../lib/supabase';
 
 export const POST: APIRoute = async (context) => {
   const supabase = supabaseClient(context);
@@ -16,7 +16,14 @@ export const POST: APIRoute = async (context) => {
 
   // Check if user is admin (by email, adjust as needed)
   const isAdmin = user.email === "avrunner01@gmail.com";
-  const db = supabaseAdmin();
+  const db = trySupabaseAdmin();
+
+  if (!db) {
+    return new Response(JSON.stringify({ error: 'Server is missing SUPABASE_SERVICE_ROLE_KEY.' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   let query = (db as any).from('rounds').delete().eq('id', id);
   if (!isAdmin) {

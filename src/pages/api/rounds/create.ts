@@ -1,6 +1,6 @@
 
 import type { APIRoute } from "astro";
-import { supabaseAdmin, supabaseClient } from "../../../lib/supabase.js";
+import { supabaseClient, trySupabaseAdmin } from "../../../lib/supabase.js";
 import { calculateHandicap } from "../../../lib/golfMath";
 
 const getPostValueMap = async (request: Request) => {
@@ -18,7 +18,7 @@ const getTodayDateString = () => new Date().toISOString().split("T")[0];
 
 export const POST: APIRoute = async (context) => {
   const supabase = supabaseClient(context);
-  const db = supabaseAdmin();
+  const db = trySupabaseAdmin();
   const postValues = await getPostValueMap(context.request);
 
   const teeIdRaw = typeof postValues.tee_id === "string" ? postValues.tee_id : "";
@@ -70,6 +70,10 @@ export const POST: APIRoute = async (context) => {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return context.redirect("/login");
+
+  if (!db) {
+    return new Response("Server is missing SUPABASE_SERVICE_ROLE_KEY.", { status: 500 });
+  }
 
   const { error } = await (db as any).from("rounds").insert({
     profile_id: user.id,
