@@ -1,6 +1,6 @@
 // API endpoint to create a new golfer profile
 import type { APIRoute } from 'astro';
-import { supabaseClient } from '../../../lib/supabase';
+import { supabaseAdmin, supabaseClient } from '../../../lib/supabase';
 
 export const POST: APIRoute = async (context) => {
   const supabase = supabaseClient(context);
@@ -20,8 +20,9 @@ export const POST: APIRoute = async (context) => {
     return context.redirect('/login');
   }
 
-  // Upsert profile - insert or update if already exists
-  const { data, error } = await supabase
+  // Upsert profile - insert or update if already exists (use service-role to bypass trigger RLS)
+  const db = supabaseAdmin();
+  const { data, error } = await (db as any)
     .from('profiles')
     .upsert([
       {

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { supabaseClient } from '../../../lib/supabase';
+import { supabaseAdmin, supabaseClient } from '../../../lib/supabase';
 
 export const POST: APIRoute = async (context) => {
   const supabase = supabaseClient(context);
@@ -32,11 +32,12 @@ export const POST: APIRoute = async (context) => {
       current_handicap_index: isNaN(current_handicap_index) ? 0 : current_handicap_index,
       updated_at: new Date().toISOString(),
     };
-    // Try to insert, if conflict, update
-    const { error: insertError } = await supabase.from('profiles').insert(profile, { onConflict: 'id' });
+    // Try to insert, if conflict, update (use service-role to bypass trigger RLS)
+    const db = supabaseAdmin();
+    const { error: insertError } = await (db as any).from('profiles').insert(profile, { onConflict: 'id' });
     if (insertError && insertError.message && insertError.message.includes('duplicate key value')) {
       // Profile exists, update it
-      await supabase.from('profiles').update({
+      await (db as any).from('profiles').update({
         username,
         full_name,
         current_handicap_index: isNaN(current_handicap_index) ? 0 : current_handicap_index,

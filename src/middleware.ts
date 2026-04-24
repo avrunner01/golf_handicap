@@ -2,7 +2,7 @@ import { defineMiddleware } from "astro:middleware";
 import { supabaseClient } from "./lib/supabase";
 
 // Define which routes are protected
-const PROTECTED_ROUTES = ["/dashboard", "/profile", "/add-round", "/add-course"];
+const PROTECTED_ROUTES = ["/dashboard", "/profile", "/add-round", "/add-course", "/edit-round"];
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const isProtectedRoute = PROTECTED_ROUTES.some((path) =>

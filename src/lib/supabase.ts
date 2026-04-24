@@ -1,4 +1,17 @@
 import { createServerClient, parseCookieHeader } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
+
+let _adminClient: ReturnType<typeof createClient> | null = null;
+
+export const supabaseAdmin = () => {
+  if (_adminClient) return _adminClient;
+  const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set.');
+  _adminClient = createClient(import.meta.env.SUPABASE_URL, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  return _adminClient;
+};
 
 export const supabaseClient = (context: any) => {
   const client = createServerClient(

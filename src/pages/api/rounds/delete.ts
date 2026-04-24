@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { supabaseClient } from '../../../lib/supabase';
+import { supabaseAdmin, supabaseClient } from '../../../lib/supabase';
 
 export const POST: APIRoute = async (context) => {
   const supabase = supabaseClient(context);
@@ -14,11 +14,11 @@ export const POST: APIRoute = async (context) => {
     });
   }
 
-
   // Check if user is admin (by email, adjust as needed)
   const isAdmin = user.email === "avrunner01@gmail.com";
+  const db = supabaseAdmin();
 
-  let query = supabase.from('rounds').delete().eq('id', id);
+  let query = (db as any).from('rounds').delete().eq('id', id);
   if (!isAdmin) {
     query = query.eq('profile_id', user.id);
   }

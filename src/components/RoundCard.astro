@@ -1,11 +1,21 @@
 ---
 // src/components/RoundCard.astro
 const { round } = Astro.props;
+
+const formatLocalDate = (value: string | null | undefined) => {
+  if (!value) return '';
+  const [y, m, d] = String(value).split('T')[0].split('-');
+  if (y && m && d) {
+    const parsed = new Date(Number(y), Number(m) - 1, Number(d));
+    if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleDateString();
+  }
+  return String(value);
+};
 ---
 <div class="flex items-center justify-between p-4 bg-white border-l-4 border-green-500 rounded-r-lg shadow-sm mb-3">
   <div>
     <h4 class="font-bold text-slate-800">{round.course_name}</h4>
-    <p class="text-xs text-slate-500 uppercase font-semibold">{new Date(round.date).toLocaleDateString()}</p>
+    <p class="text-xs text-slate-500 uppercase font-semibold">{formatLocalDate(round.played_at ?? round.date)}</p>
   </div>
   
   <div class="flex gap-8 text-center">

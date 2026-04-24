@@ -15,9 +15,14 @@ const getSearchResultTees = (course) => {
 export default function AddRound({ courses: initialCourses }) {
   const [showModal, setShowModal] = useState(false);
   const [courses, setCourses] = useState(initialCourses || []);
+  const [selectedCourseId, setSelectedCourseId] = useState("");
   const [selectedTeeId, setSelectedTeeId] = useState("");
   const [selectedCourseName, setSelectedCourseName] = useState("");
   const selectRef = React.useRef(null);
+
+  const selectedCourse = courses.find((course) => String(course.id) === selectedCourseId) || null;
+  const availableTees = selectedCourse?.tees || [];
+  const maxPlayedAt = new Date().toISOString().split('T')[0];
 
   // Refetch courses from API (client-side)
   const fetchCourses = async () => {
@@ -84,12 +89,16 @@ export default function AddRound({ courses: initialCourses }) {
     const updatedCourse = refreshedCourses.find((item) => item.id === result.courseId)
       || refreshedCourses.find((item) => item.name === payload.course_name);
 
-    if (result.selectedTeeId) {
-      setSelectedTeeId(String(result.selectedTeeId));
-      setSelectedCourseName(payload.course_name);
-    } else if (updatedCourse && updatedCourse.tees.length > 0) {
-      setSelectedTeeId(String(updatedCourse.tees[0].id));
+    if (updatedCourse) {
+      setSelectedCourseId(String(updatedCourse.id));
       setSelectedCourseName(updatedCourse.name);
+      if (result.selectedTeeId) {
+        setSelectedTeeId(String(result.selectedTeeId));
+      } else if (updatedCourse.tees.length > 0) {
+        setSelectedTeeId(String(updatedCourse.tees[0].id));
+      } else {
+        setSelectedTeeId("");
+      }
     }
 
     setTimeout(() => {
@@ -102,42 +111,55 @@ export default function AddRound({ courses: initialCourses }) {
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Post New Round</h1>
       <form action="/api/rounds/create" method="POST" className="space-y-6 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm mb-2">
-          <label className="block text-sm font-semibold text-green-900 mb-1">Course Name</label>
-          <input
-            type="text"
-            readOnly
-            value={selectedCourseName}
-            placeholder="Select a tee below to populate"
-            className="block w-full rounded-md border-gray-300 bg-white shadow-sm text-gray-700"
-          />
-        </div>
-        <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm mb-2">
           <div className="flex justify-between items-center mb-1">
-            <label className="block text-sm font-semibold text-green-900">Select Course & Tee</label>
+            <label className="block text-sm font-semibold text-green-900">Course Name</label>
             <a href="#" onClick={handleAddCourseClick} className="text-xs text-green-700 hover:underline font-semibold">+ Add Course</a>
           </div>
+          <select
+            name="course_id"
+            required
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
+            value={selectedCourseId}
+            onChange={(e) => {
+              const courseId = e.target.value;
+              const found = courses.find((course) => String(course.id) === courseId);
+              setSelectedCourseId(courseId);
+              setSelectedCourseName(found ? found.name : "");
+              setSelectedTeeId("");
+            }}
+          >
+            <option value="">-- Choose a Course --</option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm mb-2">
+          <label className="block text-sm font-semibold text-green-900 mb-1">Tee</label>
           <select
             name="tee_id"
             required
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600"
             value={selectedTeeId}
-            onChange={e => {
+            onChange={(e) => {
               const teeId = e.target.value;
               setSelectedTeeId(teeId);
-              const found = courses?.find(c => c.tees.some(t => String(t.id) === teeId));
+              const found = courses.find((course) => course.tees.some((tee) => String(tee.id) === teeId));
+              if (found) {
+                setSelectedCourseId(String(found.id));
+              }
               setSelectedCourseName(found ? found.name : "");
             }}
             ref={selectRef}
+            disabled={!selectedCourseId}
           >
-            <option value="">-- Choose a Tee --</option>
-            {courses?.map(course => (
-              <optgroup label={course.name} key={course.id}>
-                {course.tees.map(tee => (
-                  <option value={tee.id} key={tee.id}>
-                    {tee.tee_name} (Rating: {tee.rating} / Slope: {tee.slope})
-                  </option>
-                ))}
-              </optgroup>
+            <option value="">{selectedCourseId ? "-- Choose a Tee --" : "Select a course first"}</option>
+            {availableTees.map((tee) => (
+              <option value={tee.id} key={tee.id}>
+                {tee.tee_name} (Rating: {tee.rating} / Slope: {tee.slope})
+              </option>
             ))}
           </select>
         </div>
@@ -149,7 +171,7 @@ export default function AddRound({ courses: initialCourses }) {
           </div>
           <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm mb-2">
             <label className="block text-sm font-semibold text-green-900 mb-1">Date Played</label>
-            <input type="date" name="played_at" defaultValue={new Date().toISOString().split('T')[0]}
+            <input type="date" name="played_at" defaultValue={maxPlayedAt} max={maxPlayedAt}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-600 focus:ring-green-600" />
           </div>
         </div>

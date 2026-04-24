@@ -5,7 +5,7 @@ import { supabaseClient } from '../lib/supabase';
 const supabase = supabaseClient(Astro);
 const { data: { user } } = await supabase.auth.getUser();
 
-let rounds = [];
+let rounds: { id: string; course_name: string | null; played_at: string | null; gross_score: number | null }[] = [];
 if (user) {
   const { data } = await supabase
     .from('rounds')
@@ -14,6 +14,16 @@ if (user) {
     .order('played_at', { ascending: false });
   rounds = data || [];
 }
+
+const formatLocalDate = (value: string | null | undefined) => {
+  if (!value) return '';
+  const [y, m, d] = String(value).split('T')[0].split('-');
+  if (y && m && d) {
+    const parsed = new Date(Number(y), Number(m) - 1, Number(d));
+    if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleDateString();
+  }
+  return String(value);
+};
 ---
 
 <Layout title="Delete Round">
@@ -30,22 +40,10 @@ if (user) {
               <li class="flex items-center justify-between bg-white p-4 rounded shadow border">
                 <div>
                   <div class="font-semibold">{round.course_name}</div>
-                  <div class="text-sm text-gray-500">{round.played_at ? new Date(round.played_at).toLocaleDateString() : ''}</div>
+                  <div class="text-sm text-gray-500">{formatLocalDate(round.played_at)}</div>
                   <div class="text-sm text-gray-700">Score: {round.gross_score}</div>
                 </div>
-                <form on:submit={async (e) => {
-                  e.preventDefault();
-                  const res = await fetch(`/api/rounds/delete`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: round.id })
-                  });
-                  if (res.ok) {
-                    window.location.reload();
-                  } else {
-                    alert('Failed to delete round.');
-                  }
-                }}>
+                <form class="delete-round-form" data-round-id={round.id}>
                   <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Delete</button>
                 </form>
               </li>
@@ -58,3 +56,24 @@ if (user) {
     )}
   </main>
 </Layout>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.delete-round-form').forEach(function (form) {
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const roundId = form.getAttribute('data-round-id');
+        const res = await fetch('/api/rounds/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: roundId })
+        });
+        if (res.ok) {
+          window.location.reload();
+        } else {
+          alert('Failed to delete round.');
+        }
+      });
+    });
+  });
+</script>

@@ -4,9 +4,22 @@ interface Props {
 }
 const { scores } = Astro.props;
 
-// Sort by date and take the last 10-20 rounds
+const parseLocalDate = (value: string) => {
+  const [y, m, d] = String(value).split('T')[0].split('-');
+  if (y && m && d) {
+    return new Date(Number(y), Number(m) - 1, Number(d));
+  }
+  return new Date(value);
+};
+
+const formatLocalDate = (value: string) => {
+  const parsed = parseLocalDate(value);
+  return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleDateString();
+};
+
+// Sort by date and take the last 10 rounds
 const chartData = scores
-  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime())
   .slice(-10);
 ---
 
@@ -23,7 +36,7 @@ const chartData = scores
   new Chart(ctx, {
     type: 'line',
     data: {
-      labels: chartData.map(d => new Date(d.date).toLocaleDateString()),
+      labels: chartData.map(d => formatLocalDate(d.date)),
       datasets: [{
         label: 'Differential',
         data: chartData.map(d => d.differential),

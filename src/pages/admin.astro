@@ -8,10 +8,21 @@ const { data: { user } } = await supabase.auth.getUser();
 // Check if user is admin (example: check email or a custom claim/role)
 const isAdmin = user && user.email === "avrunner01@gmail.com"; // Change as needed
 
-let users = [];
-let courses = [];
+let users: { id: string; username: string | null; full_name: string | null }[] = [];
+let courses: { id: string; name: string | null }[] = [];
 let stats = { totalUsers: 0, totalRounds: 0, totalCourses: 0 };
-let allRounds = [];
+let allRounds: { id: string; course_name: string | null; played_at: string | null; gross_score: number | null; profile_id: string }[] = [];
+
+const formatLocalDate = (value: string | null | undefined) => {
+  if (!value) return '';
+  const [y, m, d] = String(value).split('T')[0].split('-');
+  if (y && m && d) {
+    const parsed = new Date(Number(y), Number(m) - 1, Number(d));
+    if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleDateString();
+  }
+  return String(value);
+};
+
 if (isAdmin) {
   // Fetch all users
   const { data: usersData } = await supabase.from('profiles').select('id, username, full_name');
@@ -99,7 +110,7 @@ if (isAdmin) {
                 <li class="flex items-center justify-between bg-white p-4 rounded shadow border">
                   <div>
                     <div class="font-semibold">{round.course_name}</div>
-                    <div class="text-sm text-gray-500">{round.played_at ? new Date(round.played_at).toLocaleDateString() : ''}</div>
+                    <div class="text-sm text-gray-500">{formatLocalDate(round.played_at)}</div>
                     <div class="text-sm text-gray-700">Score: {round.gross_score}</div>
                     <div class="text-xs text-gray-400">User ID: {round.profile_id}</div>
                   </div>

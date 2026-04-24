@@ -1,6 +1,6 @@
 
 import type { APIRoute } from "astro";
-import { supabaseClient } from "../../../lib/supabase.js";
+import { supabaseAdmin, supabaseClient } from "../../../lib/supabase.js";
 import { calculateHandicap } from "../../../lib/golfMath";
 
 const getPostValueMap = async (request: Request) => {
@@ -14,8 +14,11 @@ const getPostValueMap = async (request: Request) => {
   }
 };
 
+const getTodayDateString = () => new Date().toISOString().split("T")[0];
+
 export const POST: APIRoute = async (context) => {
   const supabase = supabaseClient(context);
+  const db = supabaseAdmin();
   const postValues = await getPostValueMap(context.request);
 
   const teeIdRaw = typeof postValues.tee_id === "string" ? postValues.tee_id : "";
@@ -25,9 +28,14 @@ export const POST: APIRoute = async (context) => {
   const tee_id = teeIdRaw.trim();
   const gross_score = Number.parseInt(grossScoreRaw, 10);
   const played_at = playedAtRaw || new Date().toISOString().split("T")[0];
+  const today = getTodayDateString();
 
   if (!tee_id || !Number.isFinite(gross_score)) {
     return new Response("Invalid round submission.", { status: 400 });
+  }
+
+  if (played_at > today) {
+    return new Response("Future rounds cannot be saved.", { status: 400 });
   }
 
   // Fetch the course name for the selected tee
@@ -63,7 +71,7 @@ export const POST: APIRoute = async (context) => {
 
   if (!user) return context.redirect("/login");
 
-  const { error } = await supabase.from("rounds").insert({
+  const { error } = await (db as any).from("rounds").insert({
     profile_id: user.id,
     tee_id,
     gross_score,
@@ -76,7 +84,7 @@ export const POST: APIRoute = async (context) => {
   }
 
   // Fetch all differentials for this user
-  const { data: rounds, error: roundsError } = await supabase
+  const { data: rounds, error: roundsError } = await (db as any)
     .from("rounds")
     .select("differential")
     .eq("profile_id", user.id);
@@ -84,11 +92,11 @@ export const POST: APIRoute = async (context) => {
   if (!roundsError && Array.isArray(rounds)) {
     // Only use valid number differentials
     const differentials = rounds
-      .map(r => typeof r.differential === 'number' ? r.differential : Number(r.differential))
-      .filter(d => !isNaN(d));
+      .map((r: any) => typeof r.differential === 'number' ? r.differential : Number(r.differential))
+      .filter((d: number) => !isNaN(d));
     if (differentials.length > 0) {
       const newHandicap = calculateHandicap(differentials);
-      await supabase
+      await (db as any)
         .from("profiles")
         .update({ current_handicap_index: newHandicap, updated_at: new Date().toISOString() })
         .eq("id", user.id);
