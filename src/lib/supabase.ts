@@ -3,6 +3,15 @@ import { createClient } from '@supabase/supabase-js'
 
 let _adminClient: ReturnType<typeof createClient> | null = null;
 
+const isResponseAlreadySentError = (error: unknown) => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return error.name === 'ResponseSentError'
+    || error.message.includes('response has already been sent');
+};
+
 export const supabaseAdmin = () => {
   if (_adminClient) return _adminClient;
   const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -33,27 +42,26 @@ export const supabaseClient = (context: any) => {
           return found && typeof found.value === 'string' ? found.value : undefined;
         },
         set(name: string, value: string, options?: any) {
-          context.cookies.set(name, value, options);
+          try {
+            context.cookies.set(name, value, options);
+          } catch (error) {
+            if (!isResponseAlreadySentError(error)) {
+              throw error;
+            }
+          }
         },
         remove(name: string, options?: any) {
-          context.cookies.delete(name, options);
+          try {
+            context.cookies.delete(name, options);
+          } catch (error) {
+            if (!isResponseAlreadySentError(error)) {
+              throw error;
+            }
+          }
         },
       },
     }
   );
-
-  // Wrap getUser to handle stale refresh tokens gracefully
-  const originalGetUser = client.auth.getUser.bind(client.auth);
-  client.auth.getUser = async (...args: any[]) => {
-    const result = await originalGetUser(...args);
-    if (result.error?.code === 'refresh_token_not_found') {
-      // Clear stale auth cookies so the user gets a clean login
-      try {
-        await client.auth.signOut();
-      } catch (_) {}
-    }
-    return result;
-  };
 
   return client;
 }
