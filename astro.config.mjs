@@ -7,7 +7,13 @@ import react from '@astrojs/react';
 
 export default defineConfig({
   output: 'server',
-  adapter: netlify(), // Ensure there is a comma here
+  adapter: netlify({
+    devFeatures: {
+      edgeFunctions: false,
+      images: true,
+      environmentVariables: false,
+    },
+  }),
   integrations: [react()],
   vite: {
     plugins: [
