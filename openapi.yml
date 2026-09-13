@@ -1,0 +1,618 @@
+openapi: 3.0.0
+info:
+  title: GolfCourseAPI
+  description: >
+    An API service that provides golf course data to clients, including
+    course name, location, tee box data, course rating and slope rating.
+  version: 1.0.0
+servers:
+  - url: https://api.golfcourseapi.com/
+paths:
+  /v1/search:
+    get:
+      summary: Search for a golf course
+      description: >
+        This endpoint allows clients to search for a golf course based on 
+        either the course name or the club name. (The service will return
+        the most relevant matches first.) Results carry only a count of tee
+        boxes per grouping; request an individual course by id to get the
+        full tee box data.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      operationId: getCoursesBySearch
+      parameters:
+        - in: query
+          name: search_query
+          required: true
+          description: >
+            The search term used to retrieve a given golf course or golf club.
+            Partial names are supported by default (see `fuzzy_match`).
+          schema:
+            type: string
+            example: pinehurst
+        - in: query
+          name: fuzzy_match
+          required: false
+          description: >
+            When true (the default), the search performs fuzzy substring
+            matching, so partial terms like "hurst" or "pine" will match
+            "Pinehurst Golf Course". Set to false to use whole-word
+            full-text matching instead.
+          schema:
+            type: boolean
+            default: true
+            example: true
+      responses:
+        '200':
+          description: Successful get request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseSearch'
+        '401':
+          $ref:  '#/components/responses/UnauthorizedError'
+  /v1/courses:
+    post:
+      summary: Create a new golf course
+      description: >
+        Create a new golf course. Requires a `pro` or `enterprise`
+        subscription; requests from users on the free tier receive a
+        `403 Forbidden` response. The creation is recorded in an audit log
+        attributed to the authenticated user.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      operationId: createCourse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseInput'
+      responses:
+        '201':
+          description: Created a new golf course
+          headers:
+            Location:
+              description: URL of the newly created course
+              schema:
+                type: string
+                example: /v1/courses/7k2m9qb4
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  course:
+                    $ref: '#/components/schemas/Course'
+        '401':
+          $ref:  '#/components/responses/UnauthorizedError'
+        '403':
+          $ref:  '#/components/responses/ForbiddenError'
+        '422':
+          $ref:  '#/components/responses/ValidationError'
+  /v1/courses/{id}:
+    get:
+      summary: Get golf course
+      description: >
+        This resource represents an individual golf course in the system.
+        Each golf course is identified by an opaque 8-character `id` such as
+        `7k2m9qb4`, drawn from the lowercase alphabet
+        `0123456789abcdefghjkmnpqrstvwxyz` (the digits plus a-z excluding
+        `i`, `l`, `o` and `u`). Ids are case-insensitive on input and always
+        returned in lowercase. Numeric ids are not accepted.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      operationId: getCourseById
+      parameters:
+        - name: id
+          in: path
+          description: Golf Course ID
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 8
+            pattern: '^[0-9abcdefghjkmnpqrstvwxyz]{8}$'
+            example: 7k2m9qb4
+      responses:
+        '200':
+          description: Successful get request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '401':
+          $ref:  '#/components/responses/UnauthorizedError'
+    patch:
+      summary: Update a golf course
+      description: >
+        Partially update an existing golf course. Only the fields included
+        in the request body are changed; omitted fields (or fields set to
+        `null`) are left unchanged. Requires a `pro` or `enterprise`
+        subscription; requests from users on the free tier receive a
+        `403 Forbidden` response. If the course is modified by another
+        request between your read and your update, the API responds with
+        `409 Conflict` — refetch the course and retry. Every change is
+        recorded in an audit log attributed to the authenticated user.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      operationId: updateCourseById
+      parameters:
+        - name: id
+          in: path
+          description: Golf Course ID
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 8
+            pattern: '^[0-9abcdefghjkmnpqrstvwxyz]{8}$'
+            example: 7k2m9qb4
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseUpdateInput'
+      responses:
+        '200':
+          description: Updated the golf course
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  course:
+                    $ref: '#/components/schemas/Course'
+        '401':
+          $ref:  '#/components/responses/UnauthorizedError'
+        '403':
+          $ref:  '#/components/responses/ForbiddenError'
+        '404':
+          $ref:  '#/components/responses/NotFoundError'
+        '409':
+          $ref:  '#/components/responses/EditConflictError'
+        '422':
+          $ref:  '#/components/responses/ValidationError'
+  /v1/users:
+    post:
+      summary: Register a new user
+      requestBody:
+        description: >
+          Register a new user with an email address. Also done via the 
+          web form at https://www.golfcourseapi.com/sign-in.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterForm'
+      responses:
+        '201':
+          description: Created a new user
+  /v1/users/activated:
+    put:
+      summary: Activate a new user account
+      requestBody:
+        description: >
+          Activate a new user with a token provided to the user's email after registration. 
+          Also done via the process started by https://www.golfcourseapi.com/sign-in.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivatePayload'
+      responses:
+        '200':
+          description: Activated user
+  /v1/healthcheck:
+    get:
+      summary: Healthcheck
+      description: >
+        This endpoint returns the current status of the API service, 
+        including whether the API is available and the environment
+        and version hash of the current version.
+      responses:
+        '200':
+          description: Healthcheck returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Healthcheck"  
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        Preferred. Send your API key as a bearer token in the Authorization
+        header, e.g. `Authorization: Bearer <your API key>`.
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: >
+        Legacy. Send the Authorization header value as `Key <your API key>`.
+        Still supported for existing integrations.
+  schemas:
+    Healthcheck:
+      type: object
+      properties:
+        status:
+          type: string
+        system_info:
+          type: object
+          properties:
+            environment: 
+              type: string
+            version: 
+              type: string
+      example:
+        status: available
+        system_info: 
+          type: object
+          properties:
+            environment: production
+            version: e91c89471337e4f938928da49c072d0cad0ec176
+    Course:
+      type: object
+      properties:
+        id:
+          type: string
+          description: >
+            Opaque 8-character course identifier. Always lowercase on output;
+            accepted case-insensitively on input.
+          minLength: 8
+          maxLength: 8
+          pattern: '^[0-9abcdefghjkmnpqrstvwxyz]{8}$'
+          example: 7k2m9qb4
+        club_name:
+          type: string
+          example: Murray Golf Club
+        course_name:
+          type: string
+          example: Course No. 1
+        scorecard_url:
+          type: string
+          description: URL to the course's online scorecard. Omitted when not set.
+          example: https://example.com/scorecards/course-no-1.pdf
+        location:
+          type: object
+          properties:
+            address:
+              type: string
+              example: 124 Golf Course Lane, Murray, KY 42071, USA
+            city:
+              type: string
+              example: Murray
+            state:
+              type: string
+              example: KY
+            country:
+              type: string
+              example: United States
+        tees:
+          type: object
+          properties:
+            female:
+              type: array
+              items:
+                $ref: '#/components/schemas/TeeBox'
+            male:
+              type: array
+              items:
+                $ref: '#/components/schemas/TeeBox'
+    CourseInput:
+      type: object
+      required:
+        - club_name
+        - course_name
+        - tees
+      properties:
+        club_name:
+          type: string
+          example: Murray Golf Club
+        course_name:
+          type: string
+          example: Course No. 1
+        scorecard_url:
+          type: string
+          example: https://example.com/scorecards/course-no-1.pdf
+        location:
+          type: object
+          properties:
+            address:
+              type: string
+              example: 124 Golf Course Lane, Murray, KY 42071, USA
+            city:
+              type: string
+              example: Murray
+            state:
+              type: string
+              example: KY
+            country:
+              type: string
+              example: United States
+        tees:
+          type: object
+          description: >
+            Tee boxes grouped by gender. At least one tee box must be
+            provided.
+          properties:
+            female:
+              type: array
+              items:
+                $ref: '#/components/schemas/TeeBox'
+            male:
+              type: array
+              items:
+                $ref: '#/components/schemas/TeeBox'
+    CourseUpdateInput:
+      type: object
+      description: >
+        All fields are optional. Only the fields included in the request
+        are updated; omitted fields keep their current values.
+      properties:
+        club_name:
+          type: string
+          example: Murray Golf Club
+        course_name:
+          type: string
+          example: Course No. 1
+        scorecard_url:
+          type: string
+          example: https://example.com/scorecards/course-no-1.pdf
+        location:
+          type: object
+          properties:
+            address:
+              type: string
+              example: 124 Golf Course Lane, Murray, KY 42071, USA
+            city:
+              type: string
+              example: Murray
+            state:
+              type: string
+              example: KY
+            country:
+              type: string
+              example: United States
+        tees:
+          type: object
+          description: >
+            Tee boxes grouped by gender. When provided, replaces the
+            course's full set of tee boxes.
+          properties:
+            female:
+              type: array
+              items:
+                $ref: '#/components/schemas/TeeBox'
+            male:
+              type: array
+              items:
+                $ref: '#/components/schemas/TeeBox'
+    CourseSearch:
+      type: object
+      properties:
+        courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseSummary'
+          example:
+            - id: 7k2m9qb4
+              club_name: Lubbock Country Club
+              course_name: Lubbock Country Club
+              location:
+                address: 124 Golf Course Lane, Murray, KY 42071, USA
+              tees:
+                male: 4
+                female: 3
+    CourseSummary:
+      type: object
+      description: >
+        The condensed form of a course returned by search. It carries the
+        same identifying and location fields as `Course`, but summarises the
+        tee boxes as a count per grouping rather than embedding each tee box
+        and its holes. Fetch `/v1/courses/{id}` for the full tee box data.
+      properties:
+        id:
+          type: string
+          example: 7k2m9qb4
+        club_name:
+          type: string
+          example: Murray Golf Club
+        course_name:
+          type: string
+          example: Course No. 1
+        scorecard_url:
+          type: string
+          description: URL to the course's online scorecard. Omitted when not set.
+          example: https://example.com/scorecards/course-no-1.pdf
+        location:
+          type: object
+          properties:
+            address:
+              type: string
+              example: 124 Golf Course Lane, Murray, KY 42071, USA
+            city:
+              type: string
+              example: Murray
+            state:
+              type: string
+              example: KY
+            country:
+              type: string
+              example: United States
+        tees:
+          type: object
+          description: >
+            The number of tee boxes in each grouping.
+          additionalProperties:
+            type: integer
+          example:
+            male: 4
+            female: 3
+    TeeBox:
+      type: object
+      properties:
+        tee_name:
+          type: string
+          example: Blue
+        course_rating:
+          type: number
+          format: float
+          example: 75.7
+        slope_rating:
+          type: integer
+          example: 132
+        total_yards:
+          type: integer
+          example: 6348
+        total_meters: 
+          type: integer
+          example: 5805
+        number_of_holes: 
+          type: integer
+          example: 18
+        par_total: 
+          type: integer
+          example: 73
+        holes:
+          $ref: '#/components/schemas/ArrayOfHoles'
+    ArrayOfHoles:
+      type: array
+      items:
+        type: object
+        properties: 
+          par:
+            type: integer
+          yardage:
+            type: integer
+          handicap:
+            type: integer
+      example: 
+        - par: 4
+          yardage: 484
+          handicap: 9
+        - par: 3
+          yardage: 189
+          handicap: 17
+        - par: 5
+          yardage: 587
+          handicap: 2
+        - par: 4
+          yardage: 484
+          handicap: 9
+        - par: 3
+          yardage: 189
+          handicap: 17
+        - par: 5
+          yardage: 587
+          handicap: 2
+        - par: 4
+          yardage: 484
+          handicap: 9
+        - par: 3
+          yardage: 189
+          handicap: 17
+        - par: 5
+          yardage: 587
+          handicap: 2
+    RegisterForm:
+      type: object
+      properties:
+        email:
+          type: string
+      example:
+        email: joesmith@gmail.com
+    ActivatePayload:
+      type: object
+      properties:
+        email:
+          type: string
+      example:
+        token: LPGYZYT4KMBX3GMDRFK74ZXIT4
+    Metadata:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        page_size:
+          type: integer
+        first_page:
+          type: integer
+        last_page:
+          type: integer
+        total_records:
+          type: integer
+  responses:
+    UnauthorizedError:
+      description: API key is missing or invalid
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+            example: Bearer
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: API key is missing or invalid
+    ForbiddenError:
+      description: >
+        The account is not activated, or its subscription tier does not
+        allow this action (a `pro` or `enterprise` subscription is
+        required).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: your user account doesn't have the necessary permissions to access this resource
+    NotFoundError:
+      description: >
+        No course with the given id was found, or the id is not a valid course
+        id. Malformed ids are rejected as not found rather than as a validation
+        error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: the requested resource could not be found
+    EditConflictError:
+      description: The course was modified by another request; retry the update
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: unable to update the record due to an edit conflict, please try again
+    ValidationError:
+      description: The request body failed validation
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                additionalProperties:
+                  type: string
+                example:
+                  club_name: must be provided
+                  tees: must include at least one tee box
+      
+           

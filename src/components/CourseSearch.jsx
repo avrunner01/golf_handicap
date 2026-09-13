@@ -6,6 +6,7 @@ export default function CourseSearch({ onSelect }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSearch = async () => {
     const normalizedQuery = query.trim();
@@ -13,20 +14,56 @@ export default function CourseSearch({ onSelect }) {
     if (normalizedQuery.length < MIN_QUERY_LENGTH) {
       setHasSearched(false);
       setResults([]);
+      setErrorMessage('');
       return;
     }
 
     setHasSearched(true);
     setLoading(true);
+    setErrorMessage('');
     try {
       // Use local API route to avoid CORS issues and secure API key
       const response = await fetch(`/api/golf-search?q=${encodeURIComponent(normalizedQuery)}`, {
         credentials: 'include'
       });
+
       const data = await response.json();
+      if (!response.ok) {
+        setResults([]);
+
+        const baseMessage = data.error || 'Search failed. Please try again.';
+        const diagnosticParts = [];
+
+        if (typeof data.providerStatus === 'number') {
+          diagnosticParts.push(`Provider status ${data.providerStatus}`);
+        }
+
+        if (typeof data.providerAuthMode === 'string' && data.providerAuthMode.length > 0) {
+          diagnosticParts.push(`auth mode ${data.providerAuthMode}`);
+        }
+
+        if (data.providerRateLimit && typeof data.providerRateLimit === 'object') {
+          const remaining = data.providerRateLimit.remaining;
+          const limit = data.providerRateLimit.limit;
+          if (remaining !== null && remaining !== undefined) {
+            const quota = limit ? `${remaining}/${limit}` : `${remaining}`;
+            diagnosticParts.push(`remaining quota ${quota}`);
+          }
+        }
+
+        const diagnosticMessage = diagnosticParts.length > 0
+          ? `${baseMessage} (${diagnosticParts.join(', ')})`
+          : baseMessage;
+
+        setErrorMessage(diagnosticMessage);
+        return;
+      }
+
       setResults(data.courses || []);
     } catch (err) {
       console.error("Search failed", err);
+      setResults([]);
+      setErrorMessage('Search failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -45,6 +82,7 @@ export default function CourseSearch({ onSelect }) {
             if (nextQuery.trim().length < MIN_QUERY_LENGTH) {
               setHasSearched(false);
               setResults([]);
+              setErrorMessage('');
             }
           }}
           onKeyDown={(e) => {
@@ -79,7 +117,13 @@ export default function CourseSearch({ onSelect }) {
         </ul>
       )}
 
-      {!loading && hasSearched && query.trim().length >= MIN_QUERY_LENGTH && results.length === 0 && (
+      {!!errorMessage && (
+        <div className="mt-4 p-4 bg-red-50 border border-red-300 text-red-800 rounded">
+          {errorMessage}
+        </div>
+      )}
+
+      {!loading && !errorMessage && hasSearched && query.trim().length >= MIN_QUERY_LENGTH && results.length === 0 && (
         <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded">
           Course not found. Enter manually, or try again.
         </div>

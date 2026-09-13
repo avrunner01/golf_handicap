@@ -1,4 +1,7 @@
 ---
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
 import { supabaseClient } from '../lib/supabase';
 
 const supabase = supabaseClient(Astro);
@@ -16,8 +19,13 @@ const { data: handicapData } = await supabase
 const displayHandicap = handicapData?.current_handicap ?? 'NH'; // NH = No Handicap
 ---
 
-<div class="stats-card">
-  <h2>Your Handicap Index</h2>
-  <p class="text-4xl font-bold">{displayHandicap}</p>
-  <span class="text-sm">Updated automatically via WHS logic</span>
-</div>
+<Layout title="Profile" user={user}>
+  <main class="mx-auto w-full max-w-3xl px-6 pb-14">
+    <section class="rounded-2xl border border-blue-200 bg-white/80 p-8 shadow-lg backdrop-blur-sm">
+      <p class="text-sm font-semibold uppercase tracking-wide text-blue-700">Profile</p>
+      <h1 class="mt-2 text-3xl font-extrabold text-slate-900">Your Handicap Index</h1>
+      <p class="mt-5 text-5xl font-black text-blue-900">{displayHandicap}</p>
+      <p class="mt-3 text-sm text-slate-600">Updated automatically via WHS logic.</p>
+    </section>
+  </main>
+</Layout>
