@@ -142,7 +142,9 @@ import Layout from '../layouts/Layout.astro';
         }
 
         form.reset();
-        status.textContent = 'Message sent successfully. Thank you!';
+        status.textContent = typeof result?.message === 'string'
+          ? result.message
+          : "Message sent. I'll get back to you with your request.";
       } catch {
         status.textContent = 'Network error while sending. Please try again or use direct email.';
       } finally {

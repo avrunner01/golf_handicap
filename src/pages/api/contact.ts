@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { google } from 'googleapis';
+import sgMail from '@sendgrid/mail';
 
 const parseRequestBody = async (request: Request): Promise<Record<string, unknown>> => {
   const contentType = (request.headers.get('content-type') || '').toLowerCase();
@@ -37,81 +37,40 @@ const isValidEmail = (email: string) => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
-const errorText = (value: unknown): string => {
-  if (typeof value === 'string') {
-    return value;
-  }
+const sanitizeHeaderText = (value: string) => value.replace(/[\r\n]+/g, ' ').trim();
 
-  if (value instanceof Error) {
-    return value.message;
-  }
+const escapeHtml = (value: string) => value
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
 
-  if (!value || typeof value !== 'object') {
-    return '';
-  }
+const classifySendError = (error: unknown): string => {
+  if (error && typeof error === 'object') {
+    const record = error as Record<string, unknown>;
+    const response = record.response as {
+      statusCode?: number;
+      body?: {
+        errors?: Array<{ message?: string }>;
+      };
+    } | undefined;
 
-  const record = value as Record<string, unknown>;
-  const nestedError = record.error;
+    if (response?.statusCode === 429) {
+      return 'Contact notification rate limit reached. Please try again in about an hour or email support directly.';
+    }
 
-  if (typeof record.message === 'string') {
-    return record.message;
-  }
+    const firstErrorMessage = response?.body?.errors?.[0]?.message;
+    if (typeof firstErrorMessage === 'string' && firstErrorMessage.trim()) {
+      return firstErrorMessage;
+    }
 
-  if (nestedError && typeof nestedError === 'object') {
-    const nestedRecord = nestedError as Record<string, unknown>;
-    if (typeof nestedRecord.message === 'string') {
-      return nestedRecord.message;
+    if (typeof record.message === 'string' && record.message.trim()) {
+      return record.message;
     }
   }
 
-  return '';
-};
-
-const classifyMailError = (details: string): string => {
-  if (/invalid_grant|unauthorized_client|invalid_client|invalid credentials/i.test(details)) {
-    return 'Gmail OAuth credentials are invalid. Update GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REDIRECT_URI, and GMAIL_REFRESH_TOKEN.';
-  }
-
-  if (/caller|not found|requested entity was not found|precondition check failed|forbidden/i.test(details)) {
-    return 'Gmail sender/account mismatch. Ensure GMAIL_SENDER matches the Gmail account that created GMAIL_REFRESH_TOKEN and that Gmail API access is enabled.';
-  }
-
-  if (/insufficient permissions|insufficient authentication scopes|scope/i.test(details)) {
-    return 'Gmail OAuth token is missing required permissions. Recreate GMAIL_REFRESH_TOKEN with Gmail send scope.';
-  }
-
-  return 'Failed to send message. Please try again later.';
-};
-
-const createRawMessage = ({
-  from,
-  to,
-  replyTo,
-  subject,
-  body,
-}: {
-  from: string;
-  to: string;
-  replyTo: string;
-  subject: string;
-  body: string;
-}) => {
-  const message = [
-    `From: GolfHandicap Support <${from}>`,
-    `To: ${to}`,
-    `Reply-To: ${replyTo}`,
-    `Subject: ${subject}`,
-    'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset="UTF-8"',
-    '',
-    body,
-  ].join('\r\n');
-
-  return Buffer.from(message)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
+  return 'Failed to send contact notification. Please try again later.';
 };
 
 export const POST: APIRoute = async ({ request }) => {
@@ -136,93 +95,107 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
-  const gmailClientId = normalizeText(import.meta.env.GMAIL_CLIENT_ID ?? process.env.GMAIL_CLIENT_ID);
-  const gmailClientSecret = normalizeText(import.meta.env.GMAIL_CLIENT_SECRET ?? process.env.GMAIL_CLIENT_SECRET);
-  const gmailRedirectUri = normalizeText(import.meta.env.GMAIL_REDIRECT_URI ?? process.env.GMAIL_REDIRECT_URI);
-  const gmailRefreshToken = normalizeText(import.meta.env.GMAIL_REFRESH_TOKEN ?? process.env.GMAIL_REFRESH_TOKEN);
-  const gmailSender = normalizeText(import.meta.env.GMAIL_SENDER ?? process.env.GMAIL_SENDER);
+
+
+
+
+
+
+
+
+
+
+
+
+  const sendGridApiKey = normalizeText(import.meta.env.SENDGRID_API_KEY ?? process.env.SENDGRID_API_KEY);
   const contactRecipient = normalizeText(
     import.meta.env.CONTACT_RECEIVER
       ?? process.env.CONTACT_RECEIVER
-      ?? gmailSender
+      ?? import.meta.env.GMAIL_SENDER
+      ?? process.env.GMAIL_SENDER
+  );
+  const fromEmail = normalizeText(
+    import.meta.env.SENDGRID_FROM_EMAIL
+      ?? process.env.SENDGRID_FROM_EMAIL
+      ?? process.env.CONTACT_SENDER
+      ?? contactRecipient
   );
 
   const missingConfigKeys = [
-    ['GMAIL_CLIENT_ID', gmailClientId],
-    ['GMAIL_CLIENT_SECRET', gmailClientSecret],
-    ['GMAIL_REDIRECT_URI', gmailRedirectUri],
-    ['GMAIL_REFRESH_TOKEN', gmailRefreshToken],
-    ['GMAIL_SENDER', gmailSender],
+    ['SENDGRID_API_KEY', sendGridApiKey],
     ['CONTACT_RECEIVER', contactRecipient],
+    ['SENDGRID_FROM_EMAIL', fromEmail],
   ].filter(([, value]) => !value).map(([key]) => key);
 
   if (missingConfigKeys.length > 0) {
     return new Response(JSON.stringify({
       error: 'Email service is not configured on the server.',
-      details: import.meta.env.DEV
-        ? `Missing env keys: ${missingConfigKeys.join(', ')}`
-        : undefined,
+      details: import.meta.env.DEV ? `Missing env keys: ${missingConfigKeys.join(', ')}` : undefined,
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  const oauth2Client = new google.auth.OAuth2(gmailClientId, gmailClientSecret, gmailRedirectUri);
-  oauth2Client.setCredentials({ refresh_token: gmailRefreshToken });
-
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-
-  const mailSubject = `[GolfHandicap Contact] ${subject}`;
-  const mailBody = [
+  const emailText = [
     `Name: ${name}`,
     `Email: ${email}`,
-    `Submitted: ${new Date().toISOString()}`,
+    `Subject: ${subject}`,
     '',
+    'Message:',
     message,
   ].join('\n');
 
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+      <p><strong>Name:</strong> ${escapeHtml(name)}</p>
+      <p><strong>Email:</strong> <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>
+      <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
+      <p><strong>Message:</strong></p>
+      <div style="white-space: pre-wrap; background: #f3f4f6; padding: 16px; border-radius: 8px; margin-top: 8px;">${escapeHtml(message)}</div>
+    </div>
+  `;
+
   try {
-    await gmail.users.messages.send({
-      userId: 'me',
-      requestBody: {
-        raw: createRawMessage({
-          from: gmailSender,
-          to: contactRecipient,
-          replyTo: email,
-          subject: mailSubject,
-          body: mailBody,
-        }),
-      },
+    sgMail.setApiKey(sendGridApiKey);
+
+    await sgMail.send({
+      to: contactRecipient,
+      from: fromEmail,
+      replyTo: email,
+      subject: `[Contact Form] ${sanitizeHeaderText(subject)}`,
+      text: emailText,
+      html: emailHtml,
     });
 
-    return new Response(JSON.stringify({ ok: true }), {
+    console.info('Contact form submitted', {
+      name,
+      email,
+      subject,
+      message,
+      notifiedRecipient: contactRecipient,
+      submittedAt: new Date().toISOString(),
+      deliveryMode: 'sendgrid',
+    });
+
+    return new Response(JSON.stringify({
+      ok: true,
+      message: "Message sent. I'll get back to you with your request.",
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    const errorRecord = (error && typeof error === 'object')
-      ? (error as Record<string, unknown>)
-      : null;
-    const responseData = errorRecord?.response;
-    const details = [
-      errorText(error),
-      errorText(responseData),
-      errorText((responseData && typeof responseData === 'object')
-        ? (responseData as Record<string, unknown>).data
-        : null),
-    ].filter(Boolean).join(' | ');
+    const details = error instanceof Error ? error.message : 'Unknown server error';
 
-    const userError = classifyMailError(details);
-
-    console.error('Contact API send failure', {
+    console.error('SendGrid contact email failure', {
       details,
-      sender: gmailSender,
       recipient: contactRecipient,
+      sender: fromEmail,
     });
 
     return new Response(JSON.stringify({
-      error: userError,
+      error: classifySendError(error),
       details: import.meta.env.DEV ? details || undefined : undefined,
     }), {
       status: 502,
