@@ -1,76 +1,13 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import sgMail from '@sendgrid/mail';
-
-let statusMessage = '';
-let statusType = '';
-
-if (Astro.request.method === 'POST') {
-  try {
-    const data = await Astro.request.formData();
-    const name = String(data.get('name') || '').trim();
-    const email = String(data.get('email') || '').trim();
-    const subject = String(data.get('subject') || '').trim();
-    const message = String(data.get('message') || '').trim();
-    const sendGridApiKey = import.meta.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY;
-    const contactRecipient = import.meta.env.CONTACT_RECEIVER
-      || process.env.CONTACT_RECEIVER
-      || import.meta.env.GMAIL_SENDER
-      || process.env.GMAIL_SENDER;
-    const fromEmail = import.meta.env.SENDGRID_FROM_EMAIL
-      || process.env.SENDGRID_FROM_EMAIL
-      || contactRecipient;
-
-    if (!name || !email || !message) {
-      statusMessage = 'Please fill out all required fields.';
-      statusType = 'error';
-    } else if (!sendGridApiKey || !contactRecipient || !fromEmail) {
-      statusMessage = 'Email service is not configured on the server.';
-      statusType = 'error';
-    } else {
-      sgMail.setApiKey(sendGridApiKey);
-      await sgMail.send({
-        to: contactRecipient,
-        from: fromEmail,
-        replyTo: email,
-        subject: `[Contact Form] ${subject || 'New message'}`,
-        text: [
-          `Name: ${name}`,
-          `Email: ${email}`,
-          `Subject: ${subject || 'New message'}`,
-          '',
-          'Message:',
-          message,
-        ].join('\n'),
-      });
-
-      statusMessage = 'Thank you for your message! We will get back to you soon.';
-      statusType = 'success';
-    }
-  } catch (error) {
-    console.error('Contact email sending failed', error);
-    const responseStatus = error && typeof error === 'object'
-      ? (error as { response?: { statusCode?: number } }).response?.statusCode
-      : undefined;
-    statusMessage = responseStatus === 401
-      ? 'Email service authentication failed. Please contact the site administrator.'
-      : 'An error occurred while sending your message. Please try again.';
-    statusType = 'error';
-  }
-}
 ---
 
 <Layout title="Contact Us">
   <main class="max-w-2xl mx-auto px-4 py-8">
     <h1 class="text-3xl font-bold mb-6">Contact Us</h1>
 
-    {statusMessage && (
-      <div class={`p-4 mb-6 rounded ${statusType === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-        {statusMessage}
-      </div>
-    )}
-
-    <form method="POST" class="space-y-4">
+    <form name="contact" method="POST" data-netlify="true" action="/contact" class="space-y-4">
+      <input type="hidden" name="form-name" value="contact" />
       <div>
         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
         <input
