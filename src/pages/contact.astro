@@ -6,8 +6,7 @@ import Layout from '../layouts/Layout.astro';
   <main class="max-w-2xl mx-auto px-4 py-8">
     <h1 class="text-3xl font-bold mb-6">Contact Us</h1>
 
-    <form name="contact" method="POST" data-netlify="true" action="/contact" class="space-y-4">
-      <input type="hidden" name="form-name" value="contact" />
+    <form id="contact-form" method="POST" action="/api/contact" class="space-y-4">
       <div>
         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
         <input
@@ -36,6 +35,7 @@ import Layout from '../layouts/Layout.astro';
           type="text"
           id="subject"
           name="subject"
+          required
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -52,11 +52,60 @@ import Layout from '../layouts/Layout.astro';
       </div>
 
       <button
+        id="contact-submit"
         type="submit"
         class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
       >
         Send Message
       </button>
+      <p id="contact-status" class="text-sm" role="status" aria-live="polite"></p>
     </form>
   </main>
 </Layout>
+
+<script>
+  const contactForm = document.querySelector('#contact-form');
+  const contactStatus = document.querySelector('#contact-status');
+  const contactSubmit = document.querySelector('#contact-submit');
+
+  if (contactForm instanceof HTMLFormElement && contactStatus) {
+    contactForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const submitButton = contactSubmit instanceof HTMLButtonElement ? contactSubmit : null;
+
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Sending...';
+      }
+      contactStatus.textContent = 'Sending your message...';
+      contactStatus.className = 'text-sm text-gray-600';
+
+      try {
+        const response = await fetch(contactForm.action, {
+          method: 'POST',
+          body: new FormData(contactForm),
+          headers: { Accept: 'application/json' },
+        });
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(typeof result.error === 'string' ? result.error : 'Message could not be sent.');
+        }
+
+        contactForm.reset();
+        contactStatus.textContent = result.message || 'Message sent successfully.';
+        contactStatus.className = 'text-sm text-green-700';
+      } catch (error) {
+        contactStatus.textContent = error instanceof Error
+          ? error.message
+          : 'Message could not be sent. Please try again.';
+        contactStatus.className = 'text-sm text-red-700';
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Send Message';
+        }
+      }
+    });
+  }
+</script>

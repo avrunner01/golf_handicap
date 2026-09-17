@@ -9,6 +9,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "gmail:token": "node scripts/get-gmail-token.cjs",
     "astro": "astro"
   },
   "dependencies": {

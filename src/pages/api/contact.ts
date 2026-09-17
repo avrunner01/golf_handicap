@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import sgMail from '@sendgrid/mail';
+import { google } from 'googleapis';
 
 const parseRequestBody = async (request: Request): Promise<Record<string, unknown>> => {
   const contentType = (request.headers.get('content-type') || '').toLowerCase();
@@ -50,19 +50,21 @@ const classifySendError = (error: unknown): string => {
   if (error && typeof error === 'object') {
     const record = error as Record<string, unknown>;
     const response = record.response as {
-      statusCode?: number;
-      body?: {
-        errors?: Array<{ message?: string }>;
-      };
+      status?: number;
+      data?: { error?: string; error_description?: string };
     } | undefined;
-
-    if (response?.statusCode === 429) {
-      return 'Contact notification rate limit reached. Please try again in about an hour or email support directly.';
+    const googleError = `${response?.data?.error || ''} ${response?.data?.error_description || ''}`;
+    if (/invalid_grant/i.test(googleError) || /invalid_grant/i.test(String(record.message || ''))) {
+      return 'Gmail authorization has expired or been revoked. Generate a new refresh token for the current OAuth client.';
     }
-
-    const firstErrorMessage = response?.body?.errors?.[0]?.message;
-    if (typeof firstErrorMessage === 'string' && firstErrorMessage.trim()) {
-      return firstErrorMessage;
+    if (/unauthorized_client/i.test(googleError) || /unauthorized_client/i.test(String(record.message || ''))) {
+      return 'The Gmail refresh token belongs to a different OAuth client. Generate it with the exact client ID and secret configured on this server.';
+    }
+    if (response?.status === 401) {
+      return 'Gmail authentication failed. Check the OAuth client and refresh token.';
+    }
+    if (response?.status === 429) {
+      return 'Gmail sending is temporarily rate-limited. Please try again later.';
     }
 
     if (typeof record.message === 'string' && record.message.trim()) {
@@ -107,32 +109,29 @@ export const POST: APIRoute = async ({ request }) => {
 
 
 
-  const sendGridApiKey = normalizeText(import.meta.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY);
+  const gmailClientId = normalizeText(import.meta.env.GMAIL_CLIENT_ID || process.env.GMAIL_CLIENT_ID);
+  const gmailClientSecret = normalizeText(import.meta.env.GMAIL_CLIENT_SECRET || process.env.GMAIL_CLIENT_SECRET);
+  const gmailRefreshToken = normalizeText(import.meta.env.GMAIL_REFRESH_TOKEN || process.env.GMAIL_REFRESH_TOKEN);
+  const gmailSender = normalizeText(import.meta.env.GMAIL_SENDER || process.env.GMAIL_SENDER);
   const contactRecipient = normalizeText(
     import.meta.env.CONTACT_RECEIVER
       || process.env.CONTACT_RECEIVER
-      || import.meta.env.GMAIL_SENDER
-      || process.env.GMAIL_SENDER
-  );
-  const fromEmail = normalizeText(
-    import.meta.env.SENDGRID_FROM_EMAIL
-      || process.env.SENDGRID_FROM_EMAIL
-      || process.env.CONTACT_SENDER
-      || contactRecipient
   );
 
   const missingConfigKeys = [
-    ['SENDGRID_API_KEY', sendGridApiKey],
+    ['GMAIL_CLIENT_ID', gmailClientId],
+    ['GMAIL_CLIENT_SECRET', gmailClientSecret],
+    ['GMAIL_REFRESH_TOKEN', gmailRefreshToken],
+    ['GMAIL_SENDER', gmailSender],
     ['CONTACT_RECEIVER', contactRecipient],
-    ['SENDGRID_FROM_EMAIL', fromEmail],
   ].filter(([, value]) => !value).map(([key]) => key);
 
   if (missingConfigKeys.length > 0) {
     return new Response(JSON.stringify({
-      error: 'Email service is not configured on the server.',
-      details: import.meta.env.DEV ? `Missing env keys: ${missingConfigKeys.join(', ')}` : undefined,
+      error: 'Gmail email service is not configured on the server.',
+      details: import.meta.env.DEV ? `Missing env keys: ${missingConfigKeys.join(', ')}` : 'Configure Gmail OAuth2 credentials on the server.',
     }), {
-      status: 500,
+      status: 503,
       headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -157,15 +156,36 @@ export const POST: APIRoute = async ({ request }) => {
   `;
 
   try {
-    sgMail.setApiKey(sendGridApiKey);
+    const auth = new google.auth.OAuth2(gmailClientId, gmailClientSecret);
+    auth.setCredentials({ refresh_token: gmailRefreshToken });
+    const gmail = google.gmail({ version: 'v1', auth });
+    const rawMessage = [
+      `From: ${gmailSender}`,
+      `To: ${contactRecipient}`,
+      `Reply-To: ${email}`,
+      `Subject: [Contact Form] ${sanitizeHeaderText(subject)}`,
+      'MIME-Version: 1.0',
+      'Content-Type: multipart/alternative; boundary="contact-boundary"',
+      '',
+      '--contact-boundary',
+      'Content-Type: text/plain; charset="UTF-8"',
+      '',
+      emailText,
+      '--contact-boundary',
+      'Content-Type: text/html; charset="UTF-8"',
+      '',
+      emailHtml,
+      '--contact-boundary--',
+    ].join('\r\n');
+    const encodedMessage = Buffer.from(rawMessage)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
 
-    await sgMail.send({
-      to: contactRecipient,
-      from: fromEmail,
-      replyTo: email,
-      subject: `[Contact Form] ${sanitizeHeaderText(subject)}`,
-      text: emailText,
-      html: emailHtml,
+    await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: { raw: encodedMessage },
     });
 
     console.info('Contact form submitted', {
@@ -175,7 +195,7 @@ export const POST: APIRoute = async ({ request }) => {
       message,
       notifiedRecipient: contactRecipient,
       submittedAt: new Date().toISOString(),
-      deliveryMode: 'sendgrid',
+      deliveryMode: 'gmail',
     });
 
     return new Response(JSON.stringify({
@@ -188,10 +208,10 @@ export const POST: APIRoute = async ({ request }) => {
   } catch (error) {
     const details = error instanceof Error ? error.message : 'Unknown server error';
 
-    console.error('SendGrid contact email failure', {
+    console.error('Gmail contact email failure', {
       details,
       recipient: contactRecipient,
-      sender: fromEmail,
+      sender: gmailSender,
     });
 
     return new Response(JSON.stringify({
