@@ -1,175 +1,125 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import sgMail from '@sendgrid/mail';
+
+let statusMessage = '';
+let statusType = '';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const data = await Astro.request.formData();
+    const name = String(data.get('name') || '').trim();
+    const email = String(data.get('email') || '').trim();
+    const subject = String(data.get('subject') || '').trim();
+    const message = String(data.get('message') || '').trim();
+    const sendGridApiKey = import.meta.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY;
+    const contactRecipient = import.meta.env.CONTACT_RECEIVER
+      || process.env.CONTACT_RECEIVER
+      || import.meta.env.GMAIL_SENDER
+      || process.env.GMAIL_SENDER;
+    const fromEmail = import.meta.env.SENDGRID_FROM_EMAIL
+      || process.env.SENDGRID_FROM_EMAIL
+      || contactRecipient;
+
+    if (!name || !email || !message) {
+      statusMessage = 'Please fill out all required fields.';
+      statusType = 'error';
+    } else if (!sendGridApiKey || !contactRecipient || !fromEmail) {
+      statusMessage = 'Email service is not configured on the server.';
+      statusType = 'error';
+    } else {
+      sgMail.setApiKey(sendGridApiKey);
+      await sgMail.send({
+        to: contactRecipient,
+        from: fromEmail,
+        replyTo: email,
+        subject: `[Contact Form] ${subject || 'New message'}`,
+        text: [
+          `Name: ${name}`,
+          `Email: ${email}`,
+          `Subject: ${subject || 'New message'}`,
+          '',
+          'Message:',
+          message,
+        ].join('\n'),
+      });
+
+      statusMessage = 'Thank you for your message! We will get back to you soon.';
+      statusType = 'success';
+    }
+  } catch (error) {
+    console.error('Contact email sending failed', error);
+    const responseStatus = error && typeof error === 'object'
+      ? (error as { response?: { statusCode?: number } }).response?.statusCode
+      : undefined;
+    statusMessage = responseStatus === 401
+      ? 'Email service authentication failed. Please contact the site administrator.'
+      : 'An error occurred while sending your message. Please try again.';
+    statusType = 'error';
+  }
+}
 ---
 
-<Layout>
-  <section class="max-w-3xl mx-auto py-10 px-4">
-    <h1 class="text-3xl font-bold mb-4 text-green-700">Contact</h1>
-    <p class="mb-6 text-gray-700">
-      Questions, bug reports, or feedback are welcome. Reach out and we will get back to you as soon as possible.
-    </p>
+<Layout title="Contact Us">
+  <main class="max-w-2xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">Contact Us</h1>
 
-    <div class="bg-white border border-green-200 rounded-xl p-6 shadow-sm">
-      <h2 class="text-xl font-semibold text-green-800 mb-4">Send a Message</h2>
-
-      <form id="contact-form" action="/api/contact" method="post" class="space-y-4">
-        <div>
-          <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-          <input
-            id="name"
-            name="name"
-            type="text"
-            required
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Your name"
-          />
-        </div>
-
-        <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="you@example.com"
-          />
-        </div>
-
-        <div>
-          <label for="subject" class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-          <input
-            id="subject"
-            name="subject"
-            type="text"
-            required
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="How can we help?"
-          />
-        </div>
-
-        <div>
-          <label for="message" class="block text-sm font-medium text-gray-700 mb-1">Message</label>
-          <textarea
-            id="message"
-            name="message"
-            rows="6"
-            required
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Tell us what happened, and include any details that can help us reproduce the issue."
-          ></textarea>
-        </div>
-
-        <button
-          type="submit"
-          class="inline-flex items-center rounded-lg bg-green-600 text-white px-5 py-2.5 font-semibold hover:bg-green-700 transition-colors"
-        >
-          Send Message
-        </button>
-
-        <p id="contact-status" class="text-sm text-gray-600"></p>
-      </form>
-
-      <div class="text-sm text-gray-500 mt-4 flex flex-wrap items-center gap-3">
-        <span>Or email directly:</span>
-        <a
-          id="direct-email-link"
-          href="mailto:avrunner01@gmail.com"
-          class="text-blue-700 underline hover:text-blue-800"
-        >
-          avrunner01@gmail.com
-        </a>
-        <button
-          id="copy-email"
-          type="button"
-          class="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100"
-        >
-          Copy Email
-        </button>
+    {statusMessage && (
+      <div class={`p-4 mb-6 rounded ${statusType === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+        {statusMessage}
       </div>
-    </div>
-  </section>
+    )}
+
+    <form method="POST" class="space-y-4">
+      <div>
+        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          required
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div>
+        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          required
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div>
+        <label for="subject" class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+        <input
+          type="text"
+          id="subject"
+          name="subject"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div>
+        <label for="message" class="block text-sm font-medium text-gray-700 mb-1">Message *</label>
+        <textarea
+          id="message"
+          name="message"
+          rows="5"
+          required
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        ></textarea>
+      </div>
+
+      <button
+        type="submit"
+        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
+      >
+        Send Message
+      </button>
+    </form>
+  </main>
 </Layout>
-
-<script>
-  const formElement = document.querySelector('#contact-form');
-  const status = document.querySelector('#contact-status');
-  const directEmailLink = document.querySelector('#direct-email-link');
-  const copyEmailButton = document.querySelector('#copy-email');
-  const supportEmail = 'avrunner01@gmail.com';
-
-  if (formElement instanceof HTMLFormElement && status) {
-    const form = formElement;
-    const submitButton = form.querySelector('button[type="submit"]');
-    const endpoint = form.getAttribute('action') || '/api/contact';
-
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-
-      const formData = new FormData(form);
-      const name = String(formData.get('name') || '').trim();
-      const email = String(formData.get('email') || '').trim();
-      const subject = String(formData.get('subject') || '').trim();
-      const message = String(formData.get('message') || '').trim();
-
-      if (!name || !email || !subject || !message) {
-        status.textContent = 'Please complete all fields before submitting.';
-        return;
-      }
-
-      if (submitButton instanceof HTMLButtonElement) {
-        submitButton.disabled = true;
-        submitButton.textContent = 'Sending...';
-      }
-
-      status.textContent = 'Sending your message...';
-
-      try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, subject, message }),
-        });
-
-        const result = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          status.textContent = typeof result?.error === 'string'
-            ? result.error
-            : 'We could not send your message right now. Please try again or use direct email.';
-          return;
-        }
-
-        form.reset();
-        status.textContent = typeof result?.message === 'string'
-          ? result.message
-          : "Message sent. I'll get back to you with your request.";
-      } catch {
-        status.textContent = 'Network error while sending. Please try again or use direct email.';
-      } finally {
-        if (submitButton instanceof HTMLButtonElement) {
-          submitButton.disabled = false;
-          submitButton.textContent = 'Send Message';
-        }
-      }
-    });
-  }
-
-  if (directEmailLink && status) {
-    directEmailLink.addEventListener('click', () => {
-      status.textContent = 'Opening your email app... If nothing opens, use Copy Email.';
-    });
-  }
-
-  if (copyEmailButton && status && navigator.clipboard) {
-    copyEmailButton.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(supportEmail);
-        status.textContent = 'Email copied to clipboard.';
-      } catch {
-        status.textContent = 'Could not copy automatically. Email: ' + supportEmail;
-      }
-    });
-  }
-</script>

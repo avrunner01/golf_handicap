@@ -107,18 +107,18 @@ export const POST: APIRoute = async ({ request }) => {
 
 
 
-  const sendGridApiKey = normalizeText(import.meta.env.SENDGRID_API_KEY ?? process.env.SENDGRID_API_KEY);
+  const sendGridApiKey = normalizeText(import.meta.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY);
   const contactRecipient = normalizeText(
     import.meta.env.CONTACT_RECEIVER
-      ?? process.env.CONTACT_RECEIVER
-      ?? import.meta.env.GMAIL_SENDER
-      ?? process.env.GMAIL_SENDER
+      || process.env.CONTACT_RECEIVER
+      || import.meta.env.GMAIL_SENDER
+      || process.env.GMAIL_SENDER
   );
   const fromEmail = normalizeText(
     import.meta.env.SENDGRID_FROM_EMAIL
-      ?? process.env.SENDGRID_FROM_EMAIL
-      ?? process.env.CONTACT_SENDER
-      ?? contactRecipient
+      || process.env.SENDGRID_FROM_EMAIL
+      || process.env.CONTACT_SENDER
+      || contactRecipient
   );
 
   const missingConfigKeys = [
