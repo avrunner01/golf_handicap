@@ -40,7 +40,13 @@ if (user) {
 
 <Layout user={user}>
 	 <section style="text-align:center; margin-top:3rem;">
-		 <script>
+		 <script is:inline>
+			 const recoveryParams = new URLSearchParams(window.location.hash.slice(1));
+			 const recoveryType = recoveryParams.get('type') || '';
+			 if (recoveryType.startsWith('recovery') && (recoveryParams.has('access_token') || recoveryParams.has('code'))) {
+				 window.location.replace(`/reset-password${window.location.search}${window.location.hash}`);
+			 }
+
 			 document.addEventListener('DOMContentLoaded', function () {
 				 const msg = sessionStorage.getItem('handicapUpdated');
 				 if (msg) {
@@ -59,6 +65,14 @@ if (user) {
 			<p class="text-xl font-bold text-green-800 mt-2 mb-2">Welcome, {profile.full_name}!</p>
 		)}
 		<p>Welcome to your personal golf handicap app. Track your rounds, view your stats, and improve your game!</p>
+		<figure class="mx-auto my-8 w-full max-w-4xl overflow-hidden rounded-2xl shadow-lg">
+			<img
+				src="/67_chevelleaChatGPT Image Apr 30, 2026, 01_26_39 PM.png"
+				alt="Blue 1967 Chevelle SS parked beside the ocean at sunset"
+				class="block h-auto w-full"
+			/>
+			<figcaption class="bg-slate-900 px-4 py-2 text-sm text-white">1967 Chevelle SS</figcaption>
+		</figure>
 
 		{user && profile ? (
 			<div class="max-w-md mx-auto my-8 p-6 bg-green-50 border border-green-200 rounded-xl shadow">

@@ -12,7 +12,10 @@ import Layout from '../layouts/Layout.astro';
       </label>
       <label>
         Password
-        <input type="password" name="password" required minlength="6" style="width:100%;padding:0.5rem;margin-top:0.25rem;" />
+        <div style="position:relative;margin-top:0.25rem;">
+          <input id="signupPassword" type="password" name="password" required minlength="6" style="width:100%;padding:0.5rem;padding-right:4rem;" />
+          <button type="button" data-password-toggle="signupPassword" aria-controls="signupPassword" aria-pressed="false" style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#166534;cursor:pointer;font-weight:bold;">Show</button>
+        </div>
       </label>
       <label>
         Username
@@ -58,6 +61,13 @@ import Layout from '../layouts/Layout.astro';
           const result = await res.json();
           errorDiv.textContent = result.error || 'Signup failed.';
         }
+      });
+      document.querySelector('[data-password-toggle]').addEventListener('click', function() {
+        const password = document.getElementById(this.dataset.passwordToggle);
+        const isVisible = password.type === 'text';
+        password.type = isVisible ? 'password' : 'text';
+        this.textContent = isVisible ? 'Show' : 'Hide';
+        this.setAttribute('aria-pressed', String(!isVisible));
       });
     </script>
   </section>

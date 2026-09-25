@@ -44,13 +44,15 @@ const user = Astro.props.user ?? sessionUser;
 								<a href="/help" class="font-bold text-white hover:text-sky-100 hover:underline transition-colors">Help</a>
 								<a href="/contact" class="font-bold text-white hover:text-sky-100 hover:underline transition-colors">Contact</a>
 							</div>
-							{user ? (
-								<form class="self-end sm:self-auto" action="/api/auth/signout" method="POST">
+							<div class="flex items-center gap-2 self-end sm:self-auto">
+								<a href="/login?redirect=%2Fadmin" class="rounded-lg bg-white px-5 py-2 font-extrabold text-blue-800 shadow hover:bg-sky-50 transition-all">Admin Sign In</a>
+								<a href="/login" class="rounded-lg bg-white text-blue-800 px-5 py-2 font-extrabold shadow hover:bg-sky-50 transition-all">Signin</a>
+							{user && (
+								<form action="/api/auth/signout" method="POST">
 									<button type="submit" class="rounded-lg bg-white text-blue-800 px-5 py-2 font-extrabold shadow hover:bg-sky-50 transition-all">Sign Out</button>
 								</form>
-							) : (
-								<a href="/login" class="self-end rounded-lg bg-white text-blue-800 px-5 py-2 font-extrabold shadow hover:bg-sky-50 transition-all sm:self-auto">Signin</a>
 							)}
+							</div>
 						</nav>
 		<slot />
 		<Footer />
