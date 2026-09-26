@@ -42,8 +42,11 @@ if (user) {
 	 <section style="text-align:center; margin-top:3rem;">
 		 <script is:inline>
 			 const recoveryParams = new URLSearchParams(window.location.hash.slice(1));
-			 const recoveryType = recoveryParams.get('type') || '';
-			 if (recoveryType.startsWith('recovery') && (recoveryParams.has('access_token') || recoveryParams.has('code'))) {
+			 const searchParams = new URLSearchParams(window.location.search);
+			 const recoveryType = recoveryParams.get('type') || searchParams.get('type') || '';
+			 // Also forward failed recovery links (expired/used) so the error can be shown there.
+			 if (recoveryType.startsWith('recovery') || recoveryParams.has('access_token') || recoveryParams.has('code')
+				 || searchParams.has('code') || recoveryParams.has('error') || searchParams.has('error')) {
 				 window.location.replace(`/reset-password${window.location.search}${window.location.hash}`);
 			 }
 
