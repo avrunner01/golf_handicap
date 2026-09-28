@@ -1,6 +1,7 @@
 // API endpoint to create a new golfer profile
 import type { APIRoute } from 'astro';
 import { supabaseClient } from '../../../lib/supabase';
+import { upsertUserHandicap } from '../../../lib/userHandicaps';
 
 export const POST: APIRoute = async (context) => {
   const supabase = supabaseClient(context);
@@ -37,6 +38,19 @@ export const POST: APIRoute = async (context) => {
       msg = 'A profile already exists for this user.';
     }
     return new Response(JSON.stringify({ error: msg }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const { error: handicapError } = await upsertUserHandicap(
+    supabase,
+    user.id,
+    Number.isNaN(current_handicap_index) ? 0 : current_handicap_index,
+  );
+
+  if (handicapError) {
+    return new Response(JSON.stringify({ error: handicapError.message }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });

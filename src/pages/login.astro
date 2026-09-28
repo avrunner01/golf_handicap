@@ -2,6 +2,10 @@
 export const prerender = false;
 
 import Layout from "../layouts/Layout.astro";
+
+const redirectTarget = Astro.url.searchParams.get('redirect') || '';
+const isAdminLogin = redirectTarget.startsWith('/admin');
+const loginModeText = isAdminLogin ? 'Signing in as Admin' : 'Signing in as Golfer';
 ---
 <Layout title="Sign In | Golf Handicap">
   <main class="login-page">
@@ -9,6 +13,7 @@ import Layout from "../layouts/Layout.astro";
       <div class="login-header">
         <h2>Golf Handicap Tracker</h2>
         <p>Sign in to track your scores</p>
+        <p class="admin-login-copy">{loginModeText}</p>
       </div>
 
       <a href="/api/auth/google" 
@@ -124,6 +129,15 @@ import Layout from "../layouts/Layout.astro";
       margin: 0.55rem 0 0;
       color: #4b5563;
       font-size: 0.95rem;
+    }
+
+    .admin-login-copy {
+      margin-top: 0.75rem;
+      color: #14532d;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
     }
 
     .google-btn {

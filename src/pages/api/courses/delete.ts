@@ -1,20 +1,21 @@
 import type { APIRoute } from 'astro';
 import { supabaseClient } from '../../../lib/supabase';
-import { createClient } from '@supabase/supabase-js';
 
 export const POST: APIRoute = async (context) => {
   const supabase = supabaseClient(context);
   const { id } = await context.request.json();
 
   if (!id) {
-    return new Response(JSON.stringify({ error: 'Round id is required' }), {
+    return new Response(JSON.stringify({ error: 'Course id is required' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  // Get current user
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
@@ -36,35 +37,24 @@ export const POST: APIRoute = async (context) => {
   }
 
   const isAdmin = profile?.role === 'admin';
-
-  let targetRoundQuery = supabase.from('rounds').select('id, profile_id').eq('id', id);
   if (!isAdmin) {
-    targetRoundQuery = targetRoundQuery.eq('profile_id', user.id);
-  }
-
-  const { data: targetRound, error: targetRoundError } = await targetRoundQuery.single();
-  if (targetRoundError || !targetRound) {
-    return new Response(JSON.stringify({ error: 'Round not found or not authorized for deletion.' }), {
-      status: 404,
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  const serviceSupabase = createClient(
-    import.meta.env.SUPABASE_URL,
-    import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    }
-  );
+  const { error: teesError } = await supabase.from('tees').delete().eq('course_id', id);
+  if (teesError) {
+    return new Response(JSON.stringify({ error: teesError.message }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
-  const { error } = await serviceSupabase.from('rounds').delete().eq('id', targetRound.id);
-
-  if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  const { error: courseError } = await supabase.from('courses').delete().eq('id', id);
+  if (courseError) {
+    return new Response(JSON.stringify({ error: courseError.message }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });

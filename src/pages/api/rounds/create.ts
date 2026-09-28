@@ -2,6 +2,7 @@
 import type { APIRoute } from "astro";
 import { supabaseClient } from "../../../lib/supabase.js";
 import { calculateHandicap } from "../../../lib/golfMath";
+import { upsertUserHandicap } from "../../../lib/userHandicaps";
 
 const getPostValueMap = async (request: Request) => {
   try {
@@ -88,10 +89,7 @@ export const POST: APIRoute = async (context) => {
       .filter(d => !isNaN(d));
     if (differentials.length > 0) {
       const newHandicap = calculateHandicap(differentials);
-      await supabase
-        .from("profiles")
-        .update({ current_handicap_index: newHandicap, updated_at: new Date().toISOString() })
-        .eq("id", user.id);
+      await upsertUserHandicap(supabase, user.id, newHandicap);
     }
   }
 

@@ -1,4 +1,5 @@
-import { createServerClient, parseCookieHeader } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
+import { parse as parseCookie } from 'cookie'
 
 export const supabaseClient = (context: any) => {
   return createServerClient(
@@ -17,9 +18,9 @@ export const supabaseClient = (context: any) => {
             }
           }
 
-          const cookies = parseCookieHeader(context.request.headers.get('Cookie') ?? '');
-          const found = cookies.find((cookie: { name: string; value?: string }) => cookie.name === name);
-          return found && typeof found.value === 'string' ? found.value : undefined;
+          const parsedCookies = parseCookie(context.request.headers.get('Cookie') ?? '');
+          const value = parsedCookies?.[name];
+          return typeof value === 'string' ? value : undefined;
         },
         set(name: string, value: string, options?: any) {
           context.cookies.set(name, value, options);

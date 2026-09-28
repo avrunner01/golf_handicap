@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { supabaseClient } from '../../../lib/supabase';
+import { upsertUserHandicap } from '../../../lib/userHandicaps';
 
 const parseRequestBody = async (request: Request): Promise<Record<string, unknown>> => {
   const contentType = (request.headers.get('content-type') || '').toLowerCase();
@@ -60,11 +61,12 @@ export const POST: APIRoute = async (context) => {
 
   // If signup is successful, create profile
   if (data && data.user) {
+    const normalizedHandicap = isNaN(current_handicap_index) ? 0 : current_handicap_index;
     const profile = {
       id: data.user.id,
       username,
       full_name,
-      current_handicap_index: isNaN(current_handicap_index) ? 0 : current_handicap_index,
+      current_handicap_index: normalizedHandicap,
       updated_at: new Date().toISOString(),
     };
     // Try to insert, if conflict, update
@@ -74,10 +76,12 @@ export const POST: APIRoute = async (context) => {
       await supabase.from('profiles').update({
         username,
         full_name,
-        current_handicap_index: isNaN(current_handicap_index) ? 0 : current_handicap_index,
+        current_handicap_index: normalizedHandicap,
         updated_at: new Date().toISOString(),
       }).eq('id', data.user.id);
     }
+
+    await upsertUserHandicap(supabase, data.user.id, normalizedHandicap);
   }
 
   // Redirect to login page after signup attempt
